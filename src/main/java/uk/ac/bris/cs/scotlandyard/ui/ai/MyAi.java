@@ -284,21 +284,24 @@ public class MyAi implements Ai {
 			}
 
 	// eliminate unnecessary and expensive move
-	public ImmutableList<Move> eliminationForDetectives(ImmutableList<Move> moves) {
+	public ImmutableList<Move> elimination(ImmutableList<Move> moves) {
 		ArrayList<Move> finalMoves = new ArrayList<>();
-		ArrayList<Move> taxiMoves = new ArrayList<>();
+		ArrayList<Move> secretMoves = new ArrayList<>();
 		//destinations of bus/underground moves
 		ArrayList<Integer> destinations = new ArrayList<>();
 		ArrayList<Move> otherMoves = new ArrayList<>();
 		for (Move move:moves){
-			if (move.tickets().iterator().next().equals(Ticket.TAXI)) taxiMoves.add(move);
+
+			//only if it is secret and it is not double move
+			if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
+			!move.tickets().iterator().hasNext()) secretMoves.add(move);
 			else {
 				otherMoves.add(move);
 				destinations.add(getDestination(move));
 			}
 		}
 
-		for (Move move:taxiMoves){
+		for (Move move:secretMoves){
 			if (!destinations.contains(getDestination(move))) finalMoves.add(move);
 	}
 		finalMoves.addAll(otherMoves);
@@ -306,28 +309,26 @@ public class MyAi implements Ai {
 		return ImmutableList.copyOf(finalMoves);
 }
 
-	public ImmutableList<Move> eliminationForMrX(ImmutableList<Move> moves){
-		ArrayList<Move> optimised = new ArrayList<>(eliminationForDetectives(moves));
+	public ImmutableList<Move> eliminationForDoubleMove(ImmutableList<Move> moves){
 		ArrayList<Move> finalMoves = new ArrayList<>();
-		ArrayList<Move> SecretMoves = new ArrayList<>();
-		ArrayList<Move> doubleMoves = new ArrayList<>();
+		ArrayList<Move> doubleSecretMoves = new ArrayList<>();
 		//destinations of bus/underground moves
 		ArrayList<Integer> destinations = new ArrayList<>();
 		ArrayList<Move> otherMoves = new ArrayList<>();
-		for (Move move:moves){
-			if (move.tickets().iterator().next().equals(Ticket.SECRET)) SecretMoves.add(move);
+		for(Move move:moves){
+			if(move.tickets().iterator().next().equals(Ticket.SECRET)&&
+					move.tickets().iterator().next().equals(Ticket.SECRET)){
+				doubleSecretMoves.add(move);
+			}
 			else {
 				otherMoves.add(move);
 				destinations.add(getDestination(move));
 			}
 		}
-
-		for (Move move:SecretMoves){
+		for (Move move:doubleSecretMoves){
 			if (!destinations.contains(getDestination(move))) finalMoves.add(move);
 		}
-
 		finalMoves.addAll(otherMoves);
-
 		return ImmutableList.copyOf(finalMoves);
 	}
 
