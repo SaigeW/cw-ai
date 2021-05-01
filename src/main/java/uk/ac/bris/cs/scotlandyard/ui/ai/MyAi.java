@@ -24,12 +24,12 @@ public class MyAi implements Ai {
 		ImmutableList<Player> allPlayers = getPlayerList(board);
 		Player mrX = getMrX(allPlayers);
 		ImmutableList<Player> detectives = getDetectives(allPlayers);
-		Model copyOfModel = copyOfModel(board, allPlayers);
+		Model copiedModel = copyOfModel(board, allPlayers);
 		
-		Tree tree = new Tree(copyOfModel);
+		Tree tree = new Tree(copiedModel);
 
 		int depth = 4;
-		double score = minimax(tree.startNode, Model copyOfModel, depth, -99999, 99999);
+		double score = minimax(tree.startNode, Model copiedModel, depth, -99999, 99999);
 
 		// TODO: how to coordinate board during recursion & from score to move
 		List<Move> moves = board.getAvailableMoves().asList();
@@ -37,20 +37,19 @@ public class MyAi implements Ai {
 		return moves.get(new Random().nextInt(moves.size()));
 	}
 
-	private double minimax(Vertex currentNode, Model model,  int depth, double alpha, double beta) {
+	private double minimax(Vertex currentNode, Model model,  int depth, boolean isMax, double alpha, double beta) {
 
 		// currentBoard is actually a model object
-		Model currentBoard = currentNode.getCurrentBoard();
+		 Board currentBoard = model.getCurrentBoard();
 
 		//If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
 		if (depth == 0) {
-			double score = scoring(currentBoard.getCurrentBoard());
+			double score = scoring(model.getCurrentBoard());
 			currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
-			return score;
-		}
+			return score; }
 		// currently haven't been reach lowest level of tree
-		else {
-			List<Move> moves = currentBoard.getCurrentBoard().getAvailableMoves().asList();
+		if (isMax){
+			List<Move> moves = model.getCurrentBoard().getAvailableMoves().asList();
 
 			if (!moves.isEmpty()) {
 				Move checkAttribution = moves.get(0);
@@ -61,19 +60,17 @@ public class MyAi implements Ai {
 					// if it's mrX' turn, set maximum sore to node & update alpha.
 					double scoreOfMax = -99999;
 					// continuing going left at first
+					Model nextModel;
 					for (Move move : moves) {
 						// TODO: how to advance ?
-
+						nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
+						nextModel.chooseMove(move);
 						// update child node
-						Vertex child = new Vertex(currentBoard.advance(move));
+						Vertex child = new Vertex(nextModel);
 						child.move = move;
 						currentNode.addChild(child);
-
-						// get mrX' location
-						mrXLocation = getDestination(move);
-
 						// calculate & set the scores for each child node.
-						double scoreOfChild = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
+						double scoreOfChild = minimax(child, nextModel, depth+1, false, alpha, beta);
 
 						// TODO: check whether it is right to do
 						// ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
@@ -91,40 +88,47 @@ public class MyAi implements Ai {
 					}
 					return scoreOfMax;
 				}
-				else {
 
-					// if it's detective' turn, set minimum sore to node & update beta.
-					double minScore = 99999;
-
-					// TODO: how to generate moves with bunch of detectives?
-
-					for (Move move : moves) {
-						// TODO: how to advance ?
-
-						Vertex child = new Vertex(currentBoard.advance(move));
-						child.move = move;
-						currentNode.addChild(child);
-
-						double childScore = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
-						minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
-						currentNode.setScore(minScore);
-
-						// Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
-						// do not have intersection any more, no need to continue recursion
-						beta = Math.min(beta, childScore);
-						if (beta <= alpha) {
-							break;
-						}
-					}
-					return minScore;
-				}
 			}
 			// cannot make any move
 			else {
-				double score = scoring(currentBoard.getCurrentBoard());
+				double score = scoring(model.getCurrentBoard());
 				currentNode.setScore(score);
 				return score;
 			}
+		}
+		else {
+
+			// if it's detective' turn, set minimum sore to node & update beta.
+			double minScore = 99999;
+
+			// TODO: how to generate moves with bunch of detectives?
+			ImmutableList<List<Move>> combinations = combinationOfMoves(model.getCurrentBoard(),
+					getDetectives(getPlayerList(model.getCurrentBoard())));
+
+			Model nextModel;
+
+			for(List<Move> combination: combinations){
+				for (Move move : combination) {
+					nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
+					nextModel.chooseMove(move);
+				}
+				Vertex child = new Vertex(nextModel);
+				child.move = move;
+				currentNode.addChild(child);
+
+				double childScore = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
+				minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
+				currentNode.setScore(minScore);
+
+				// Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
+				// do not have intersection any more, no need to continue recursion
+				beta = Math.min(beta, childScore);
+				if (beta <= alpha) {
+					break;
+				}
+			}
+			return minScore;
 		}
 	}
 
@@ -174,6 +178,16 @@ public class MyAi implements Ai {
 
 		private void setScore(double score) {
 			this.score = score;
+		}
+
+		private void setMove(Move move){this.move = move}
+
+	}
+
+	private class dVertex extends Vertex {
+
+		private dVertex(Model currentBoard) {
+			super(currentBoard);
 		}
 
 	}
@@ -248,7 +262,14 @@ public class MyAi implements Ai {
 			return new MyModelFactory().build(board.getSetup(), mrX, detectives);
 		}
 
-		public ImmutableList<ImmutableList<Move>> combinationOfMoves(Board board){
-		
+		public ImmutableList<List<Move>> combinationOfMoves(Board board, ImmutableList<Player> detectives){
+			Set<Move> allMoves = board.getAvailableMoves();
+			HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
+			List<List<Move>> allCombination = new ArrayList<>();
+			for (Player d: detectives) groupedMoves.put(d.piece(), new ArrayList<Move>());
+			for(Move move:allMoves) groupedMoves.get(move.commencedBy()).add(move);
+			//TODO: combination algor
+			return ImmutableList.copyOf(allCombination);
+			}
 		}
 }
