@@ -32,9 +32,9 @@ public class MyAi implements Ai {
 		double score = minimax(tree.startNode, Model copiedModel, depth, -99999, 99999);
 
 		// TODO: how to coordinate board during recursion & from score to move
-		List<Move> moves = board.getAvailableMoves().asList();
-
-		return moves.get(new Random().nextInt(moves.size()));
+// 		List<Move> moves = board.getAvailableMoves().asList();
+// 		return moves.get(new Random().nextInt(moves.size()));
+		return getBestMove(tree, score);
 	}
 
 	private double minimax(Vertex currentNode, Model model,  int depth, boolean isMax, double alpha, double beta) {
@@ -253,6 +253,17 @@ public class MyAi implements Ai {
 			}
 		}
 		return ImmutableList.copyOf(detectives);
+	}
+	
+	
+	public Move getBestMove(Tree tree, double score) {
+		List<Vertex> children = new ArrayList<>(tree.getStartNode().getChildren());
+		for (Vertex best : children) {
+			if (score == best.score) {
+				return best.move;
+			}
+		}
+		return null;
 	}
 	
 		// build a copy of current board
