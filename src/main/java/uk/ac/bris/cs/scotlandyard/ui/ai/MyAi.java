@@ -1,21 +1,16 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.*;
-import com.google.errorprone.annotations.Immutable;
 import io.atlassian.fugue.Pair;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import uk.ac.bris.cs.scotlandyard.event.GameStarted;
+import org.checkerframework.checker.units.qual.A;
 import uk.ac.bris.cs.scotlandyard.model.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
-import uk.ac.bris.cs.scotlandyard.ui.GameControl;
-import uk.ac.bris.cs.scotlandyard.ui.model.PlayerProperty;
-import uk.ac.bris.cs.scotlandyard.ui.model.TicketProperty;
 
 
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class MyAi implements Ai {
 
@@ -25,52 +20,164 @@ public class MyAi implements Ai {
 	@Nonnull @Override public Move pickMove(
 			@Nonnull Board board,
 			Pair<Long, TimeUnit> timeoutPair) {
+		// create list of players update with current status
+		ImmutableList<Player> allPlayers = getPlayerList(board);
+		Player mrX = getMrX(allPlayers);
+		ImmutableList<Player> detectives = getDetectives(allPlayers);
+		Model copyOfModel = copyOfModel(board, allPlayers);
+		
+		Tree tree = new Tree(copyOfModel);
 
-		//Initialization of players and models for simulation
-		List<Player> tempDetectives = new ArrayList<>();
-		Player mrX = null;
-				/*
-				initialize player classes with default tickets
-				 */
-		for(Piece p: board.getPlayers()) {
-			PlayerProperty<Piece> playerProperty = new PlayerProperty<>(p);
-			Player player = playerProperty.asPlayer();
-			if (player.isDetective()) tempDetectives.add(player);
-			else mrX = player;
-		}
-		ImmutableList<Player> detectives = ImmutableList.copyOf(tempDetectives);
-		Model initialModel = build(board.getSetup(), mrX, detectives);
+		int depth = 4;
+		double score = minimax(tree.startNode, Model copyOfModel, depth, -99999, 99999);
 
-		//calculate the best move
+		// TODO: how to coordinate board during recursion & from score to move
 		List<Move> moves = board.getAvailableMoves().asList();
 
-
-		// TODO: replacing this place holder
 		return moves.get(new Random().nextInt(moves.size()));
 	}
 
+	private double minimax(Vertex currentNode, Model model,  int depth, double alpha, double beta) {
 
-	// alpha : max      beta : min
-	private int getIndex(List<Move> moves, int score, int index, int alpha, int beta,
-						 Board board, Player mrX, ImmutableList<Player> detectives, int pointer){
-		for (Move move: moves) {
-			if (index <= moves.size() - 1) {
-				Model model = build(board.getSetup(), mrX, detectives);
-				model.chooseMove(move);
-				// TODO : alpha-beta in first layer
-				int newScore = minimax(3, false, alpha, beta, model);
-				if(newScore < score){
-					getIndex(moves, score, index, alpha, beta,
-							model.getCurrentBoard(), mrX, detectives, pointer);
+		// currentBoard is actually a model object
+		Model currentBoard = currentNode.getCurrentBoard();
+
+		//If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
+		if (depth == 0) {
+			double score = scoring(currentBoard.getCurrentBoard());
+			currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
+			return score;
+		}
+		// currently haven't been reach lowest level of tree
+		else {
+			List<Move> moves = currentBoard.getCurrentBoard().getAvailableMoves().asList();
+
+			if (!moves.isEmpty()) {
+				Move checkAttribution = moves.get(0);
+
+				// check whether it is mrX' turn
+				if (checkAttribution.commencedBy().isMrX()) {
+
+					// if it's mrX' turn, set maximum sore to node & update alpha.
+					double scoreOfMax = -99999;
+					// continuing going left at first
+					for (Move move : moves) {
+						// TODO: how to advance ?
+
+						// update child node
+						Vertex child = new Vertex(currentBoard.advance(move));
+						child.move = move;
+						currentNode.addChild(child);
+
+						// get mrX' location
+						mrXLocation = getDestination(move);
+
+						// calculate & set the scores for each child node.
+						double scoreOfChild = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
+
+						// TODO: check whether it is right to do
+						// ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
+						scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
+						currentNode.setScore(scoreOfMax);
+
+						// update alpha, cuz it's mrX' turn
+						alpha = Math.max(alpha, scoreOfChild);
+
+						// Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
+						// do not have intersection any more, no need to continue recursion
+ 						if (beta <= alpha) {
+							break;
+						}
+					}
+					return scoreOfMax;
 				}
-				else{
-					getIndex(moves, newScore, index, alpha, beta,
-							model.getCurrentBoard(), mrX, detectives, pointer+1);
+				else {
+
+					// if it's detective' turn, set minimum sore to node & update beta.
+					double minScore = 99999;
+
+					// TODO: how to generate moves with bunch of detectives?
+
+					for (Move move : moves) {
+						// TODO: how to advance ?
+
+						Vertex child = new Vertex(currentBoard.advance(move));
+						child.move = move;
+						currentNode.addChild(child);
+
+						double childScore = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
+						minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
+						currentNode.setScore(minScore);
+
+						// Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
+						// do not have intersection any more, no need to continue recursion
+						beta = Math.min(beta, childScore);
+						if (beta <= alpha) {
+							break;
+						}
+					}
+					return minScore;
 				}
 			}
-			else return pointer;
+			// cannot make any move
+			else {
+				double score = scoring(currentBoard.getCurrentBoard());
+				currentNode.setScore(score);
+				return score;
+			}
 		}
 	}
+
+
+
+	// store Tree from the starting point
+	private class Tree {
+
+		private final Vertex startNode;
+
+		public Tree(Model currentBoard) {
+			this.startNode = new Vertex(currentBoard);
+		}
+
+		public Vertex getStartNode() {
+			return this.startNode;
+		}
+	}
+
+	// father & children vertex , current state, current score, move
+	private class Vertex {
+		private Vertex father;
+		private List<Vertex> children = new ArrayList<>();
+		private Model currentBoard;
+		private double score;
+		private Move move;
+
+		private Vertex(Model currentBoard) {
+			this.currentBoard = currentBoard;
+		}
+
+		private Model getCurrentBoard() {
+			return this.currentBoard;
+		}
+
+		private List<Vertex> getChildren() {
+			return this.children;
+		}
+
+		private void addChild(Vertex node) {
+			children.add(node);
+		}
+
+		private Vertex getFather(){
+			return this.father;
+		}
+
+		private void setScore(double score) {
+			this.score = score;
+		}
+
+	}
+
 
 	// using visitor pattern to get destination of each availableMoves
 	private Integer getDestination(Move move) {
@@ -85,155 +192,63 @@ public class MyAi implements Ai {
 			}
 		});
 	}
-
-	// TODO: 1) get the max value:
-	//  			add a container tpo store the last vertex of each path & compare them during searching
-	//       2) how to determine the  mini step
-	//public class MiniMax{
-		private HashMap<Integer, Boolean> marked;// if this vertex has been through
-		private HashMap<Integer, Integer> collectionOfEdges;// using for trace
-		private final int startLocation;// mrX'  starting location
-		private ArrayList<Move> avaliableMoves;
-		private int min;
-		private int max;
-
-
-		// TODO: get mrX' current location for startLocation from the outside
-		public MiniMax(ImmutableList<Move> moves,
-								int startLocation) {
-			marked = new HashMap<>();
-			// record the trace from every vertex to the starting point
-			this.collectionOfEdges = new HashMap<>();
-			this.startLocation = startLocation;
-			this.avaliableMoves = new ArrayList<>(moves);
-			// starting recursion
-			mX(this.avaliableMoves, startLocation);
-		}
-
-
-		public int minimax(int depth, Boolean isMax, int alpha, int beta, Model currentBoard)
-		{
-			// Terminating condition. i.e
-			// leaf node is reached
-			if (depth == 4)
-				return scoring(currentBoard.getCurrentBoard());
-
-			if (isMax)
-			{
-				int best = min;
-				// Recur for left and
-				// right children
-				/*
-				current GameState
-				 */
-
-				for (Move move:theBoard.getAvailableMoves())
-				{
-					//int val = minimax(depth + 1, nodeIndex * 2 + i, false, values, alpha, beta
-//					List<Player> detectives = new ArrayList<>();
-//					Player mrX = null;
-//
-//					for(Piece p: theBoard.getPlayers()){
-//						PlayerProperty<Piece> playerProperty = new PlayerProperty<>(p);
-//						Player temp = playerProperty.asPlayer();
-//						if (temp.isDetective()) {
-//							detectives.add(temp);
-//						}
-//						else {
-//							mrX = temp;
-//						}
-//					}
-					ImmutableList<Player> immutableDetectives = ImmutableList.copyOf(detectives);
-					Model newModel = build(theBoard.getSetup(), )
-					int val = minimax(depth+1, false, alpha, beta);
-					best = Math.max(best, val);
-					alpha = Math.max(alpha, best);
-
-					// Alpha Beta Pruning
-					if (beta <= alpha)
-						break;
-				}
-				return best;
-			}
-			else
-			{
-				int best = max;
-				// Recur for left and
-				// right children
-				for (int i = 0; i < 2; i++)
-				{
-					int val = minimax(depth + 1, nodeIndex * 2 + i,
-							true, values, alpha, beta);
-					best = Math.min(best, val);
-					beta = Math.min(beta, best);
-
-					// Alpha Beta Pruning
-					if (beta <= alpha)
-						break;
-				}
-				return best;
-			}
-		}
+	
 
 		private int scoring(Board board){
 			return new Random().nextInt();
 		}
+		
 
-		public ImmutableMap getTickets(Optional tickets){
+		public ImmutableList<Player> getPlayerList(Board board){
+			List<Player> allPlayers = new ArrayList<>();
+			for (Piece p: board.getPlayers()){
+				// iterate through all players
+				Optional<Board.TicketBoard> tempTicketBoardForEach = board.getPlayerTickets(p);
+				HashMap<Ticket, Integer> theTicketMap = new HashMap<>();
 
-		}
-
-		public Player getPlayer(Piece piece,
-								@Nonnull ImmutableMap<Ticket, Integer> tickets,
-								int location){
-			return new Player(piece, tickets, location);
-		}
-
-
-		// get current state
-		public Model build(GameSetup setup,
-						   Player mrX,
-						   ImmutableList<Player> detectives) {
-			/*
-			 * return a game Model which should hold a GameState and Observer list
-			 */
-			return new MyModelFactory().build(setup, mrX, detectives);
-		}
-
-
-		// TODO:  1) set up the depth
-		//		2) figure out how to walk back, and go to another child vertex
-		private void mX(ArrayList<Move> availableMoves,
-						 int currentLocation){
-			// mark the vertex
-			this.marked.put(currentLocation, true);
-			for (Move avaliableMove : availableMoves) {
-				Integer oneOfNextLocation = getDestination(avaliableMove);
-				// determine if child vertex has been used
-				if (!marked.get(oneOfNextLocation)) {
-					// store to a list, which used to produce the trace
-					this.collectionOfEdges.put(oneOfNextLocation, currentLocation);
-					// TODO: update availableMoves
-					/* return a new GameState with advance*/
-					// recursion step, walk to oneOfNextLocation
-					mX(availableMoves,oneOfNextLocation);
+				// update tickets for every player
+				if (tempTicketBoardForEach.isPresent()) {
+					Board.TicketBoard mid = tempTicketBoardForEach.get();
+					for (Ticket t : Ticket.values()) {
+						theTicketMap.put(t,mid.getCount(t));
+					}
 				}
+				ImmutableMap<Ticket, Integer> tempMap = ImmutableMap.copyOf(theTicketMap);
+
+				// get player location
+				// TODO: if whether getAvailableMoves is empty?
+				int	locationOfPlayer = board.getAvailableMoves().asList().get(0).source();
+
+				Player temp = new Player(p, tempMap, locationOfPlayer);
+				allPlayers.add(temp);
+			}
+			return ImmutableList.copyOf(allPlayers);
+		}
+
+	public Player getMrX(ImmutableList<Player> players) {
+		Player mrX = null;
+		for (Player p : players) { if (p.isMrX()) mrX = p; }
+		return mrX;
+	}
+
+	public ImmutableList<Player> getDetectives(ImmutableList<Player> players){
+		List<Player> detectives = new ArrayList<>();
+		for (Player p : players) {
+			if (p.isDetective()) {
+				detectives.add(p);
 			}
 		}
-
-		public boolean hasPathTo(int currentLocation) { return marked.get(currentLocation); }
-
-		// trace back, get the path
-		public Iterable<Integer> pathTo(int currentLocation)
-		{
-			if (!hasPathTo(currentLocation)) return null;
-			Stack<Integer> path = new Stack<>();
-			// is it right ?
-			for (int x = currentLocation; x != this.startLocation; x = collectionOfEdges.get(x))
-				path.push(x);
-			path.push(this.startLocation);
-			return path;
+		return ImmutableList.copyOf(detectives);
+	}
+	
+		// build a copy of current board
+		public Model copyOfModel(Board board, ImmutableList<Player> players) {
+			Player mrX = getMrX(players);
+			ImmutableList<Player> detectives = getDetectives(players);
+			return new MyModelFactory().build(board.getSetup(), mrX, detectives);
 		}
-	//}
 
+		public ImmutableList<ImmutableList<Move>> combinationOfMoves(Board board){
+		
+		}
 }
