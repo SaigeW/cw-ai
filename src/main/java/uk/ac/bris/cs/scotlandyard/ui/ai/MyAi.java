@@ -271,5 +271,53 @@ public class MyAi implements Ai {
 			//TODO: combination algor
 			return ImmutableList.copyOf(allCombination);
 			}
+
+	// eliminate unnecessary and expensive move
+	public ImmutableList<Move> eliminationForDetectives(ImmutableList<Move> moves) {
+		ArrayList<Move> finalMoves = new ArrayList<>();
+		ArrayList<Move> taxiMoves = new ArrayList<>();
+		//destinations of bus/underground moves
+		ArrayList<Integer> destinations = new ArrayList<>();
+		ArrayList<Move> otherMoves = new ArrayList<>();
+		for (Move move:moves){
+			if (move.tickets().iterator().next().equals(Ticket.TAXI)) taxiMoves.add(move);
+			else {
+				otherMoves.add(move);
+				destinations.add(getDestination(move));
+			}
 		}
+
+		for (Move move:taxiMoves){
+			if (!destinations.contains(getDestination(move))) finalMoves.add(move);
+	}
+		finalMoves.addAll(otherMoves);
+
+		return ImmutableList.copyOf(finalMoves);
+}
+
+	public ImmutableList<Move> eliminationForMrX(ImmutableList<Move> moves){
+		ArrayList<Move> optimised = new ArrayList<>(eliminationForDetectives(moves));
+		ArrayList<Move> finalMoves = new ArrayList<>();
+		ArrayList<Move> SecretMoves = new ArrayList<>();
+		ArrayList<Move> doubleMoves = new ArrayList<>();
+		//destinations of bus/underground moves
+		ArrayList<Integer> destinations = new ArrayList<>();
+		ArrayList<Move> otherMoves = new ArrayList<>();
+		for (Move move:moves){
+			if (move.tickets().iterator().next().equals(Ticket.SECRET)) SecretMoves.add(move);
+			else {
+				otherMoves.add(move);
+				destinations.add(getDestination(move));
+			}
+		}
+
+		for (Move move:SecretMoves){
+			if (!destinations.contains(getDestination(move))) finalMoves.add(move);
+		}
+
+		finalMoves.addAll(otherMoves);
+
+		return ImmutableList.copyOf(finalMoves);
+	}
+
 }
