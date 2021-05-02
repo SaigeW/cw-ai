@@ -36,7 +36,7 @@ public class MyAi implements Ai {
         Tree tree = new Tree(copiedModel);
 
         int depth = 4;
-        double score = minimax(tree.startNode, Model copiedModel, depth, -99999, 99999);
+        double score = minimax(tree.startNode, Model copiedModel, depth, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         // TODO: how to coordinate board during recursion & from score to move
 // 		List<Move> moves = board.getAvailableMoves().asList();
@@ -51,7 +51,7 @@ public class MyAi implements Ai {
 
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
-            double score = scoring(model.getCurrentBoard());
+            double score = scoring(model.getCurrentBoard(), );
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
             return score;
         }
@@ -62,7 +62,7 @@ public class MyAi implements Ai {
             if (!moves.isEmpty()) {
 
                 // if it's mrX' turn, set maximum sore to node & update alpha.
-                double scoreOfMax = -99999;
+                double scoreOfMax = Double.NEGATIVE_INFINITY;
                 // continuing going left at first
                 Model nextModel;
                 for (Move move : moves) {
@@ -94,13 +94,13 @@ public class MyAi implements Ai {
             }
             // cannot make any move
             else {
-                double score = scoring(model.getCurrentBoard());
+                double score = scoring(model, );
                 currentNode.setScore(score);
                 return score;
             }
         } else {
             // if it's detective' turn, set minimum sore to node & update beta.
-            double minScore = 99999;
+            double minScore = Double.POSITIVE_INFINITY;
 
             // TODO: how to generate moves with bunch of detectives?
             ImmutableList<List<Move>> combinations = combinationOfMoves(model.getCurrentBoard(),
@@ -149,7 +149,6 @@ public class MyAi implements Ai {
 
     // father & children vertex , current state, current score, move
     private class Vertex {
-        private Vertex father;
         private List<Vertex> children = new ArrayList<>();
         private Model currentBoard;
         private double score;
@@ -171,10 +170,6 @@ public class MyAi implements Ai {
             children.add(node);
         }
 
-        private Vertex getFather() {
-            return this.father;
-        }
-
         private void setScore(double score) {
             this.score = score;
         }
@@ -182,7 +177,6 @@ public class MyAi implements Ai {
         private void setMove(Move move) {
             this.move = move;
         }
-
     }
 
     private class dVertex extends Vertex {
@@ -209,10 +203,6 @@ public class MyAi implements Ai {
         });
     }
 
-
-    private int scoring(Board board) {
-        return new Random().nextInt();
-    }
 
 
     public ImmutableList<Player> getPlayerList(Board board) {
@@ -354,6 +344,75 @@ public class MyAi implements Ai {
         }
         finalMoves.addAll(otherMoves);
         return ImmutableList.copyOf(finalMoves);
+    }
+
+    // TODO: how to calculate score ?
+    // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
+    private double scoring(Board board, int locationOfMrx, ImmutableList<Player> detectives) {
+        int scoreOfBoard = 0;
+
+        // iterate through list of detectives to find the shortest distance for each detective
+        for (Player detective : detectives) {
+            int detectiveLocation = detective.location();
+
+            // using a list to store listOfUnevaluatedNodes
+            List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
+
+            // initialize, shortest distance of other nodes are all infinity
+            // references: sion's lecture & princeton java source file for Dijkstra algorithm
+            // distances list : mapping each node with distance to currentNode
+            List<Double> distances = new ArrayList<>();
+
+            for (int i = 0; i < listOfUnevaluatedNodes.size(); i++) {
+                distances.set(i, Double.POSITIVE_INFINITY);
+            }
+            distances.set(locationOfMrx, 0.0);
+
+            // starting calculation until we find the shortest distance
+            Integer currentNode = locationOfMrx;
+            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
+                // select a new currentNode with shortest distance(under current circumstance)
+                currentNode = nodeWithShortestDistance(distances);
+
+                List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
+
+                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
+                for(Integer node: adjNodes) {
+                    // cuz all paths' weight equal to 1
+                    double ValueOfExtendShortestPath = distances.get(currentNode) + 1;
+                    // check whether currentNode is the shortest one
+                    if (ValueOfExtendShortestPath < distances.get(node) && listOfUnevaluatedNodes.contains(node)) {
+                        distances.set(node, ValueOfExtendShortestPath);
+                    }
+                }
+                // never go through this node again
+                distances.set(currentNode, Double.NEGATIVE_INFINITY);
+                listOfUnevaluatedNodes.remove(currentNode);
+            }
+            // sum up the distances
+            scoreOfBoard += distances.get(detectiveLocation);
+        }
+        // TODO: should we just use reciprocal ?
+        return scoreOfBoard/((double) detectives.size());
+    }
+
+
+    // TODO: maybe do some optimization ?
+    // find a node which got shortest distance
+    private Integer nodeWithShortestDistance(List<Double> distances) {
+        int indexOfShortestNode = 0;
+        for (int i = 0; i < distances.size(); i++) {
+            if (distances.get(indexOfShortestNode) > distances.get(i)) {
+                indexOfShortestNode = i;
+            }
+        }
+        return indexOfShortestNode;
+    }
+
+    private void ifNodeValid(List<Double> distances, int v) {
+        int sizeOfDistances = distances.size();
+        if (v < 0 || v >= sizeOfDistances)
+            throw new IllegalArgumentException("error");
     }
 
 }
