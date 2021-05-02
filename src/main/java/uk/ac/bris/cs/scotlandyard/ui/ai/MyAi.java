@@ -1,5 +1,5 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
-
+import com.google.common.collect.Lists;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.*;
 import io.atlassian.fugue.Pair;
@@ -270,32 +270,44 @@ public class MyAi implements Ai {
     public ImmutableList<List<Move>> combinationOfMoves(Board board, ImmutableList<Player> detectives) {
         Set<Move> allMoves = board.getAvailableMoves();
         HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
-        List<List<Move>> allCombinations = new ArrayList<>();
-        ArrayList<Integer> lims = new ArrayList<>();
-        ArrayList<Integer> indice = new ArrayList<>();
-        ArrayList<ArrayList<Integer>> combinationsOfIndex = new ArrayList<>();
-        int temp;
 
         for (Player d : detectives) {
             groupedMoves.put(d.piece(), new ArrayList<Move>());
-            indice.add(0);
         }
         for (Move move : allMoves) groupedMoves.get(move.commencedBy()).add(move);
+
+        List<List<Move>> groupedMovesAsList = new ArrayList<>();
         for (Player d : detectives) {
-            lims.add(groupedMoves.get(d.piece()).size());
+            groupedMovesAsList.add(groupedMoves.get(d.piece()));
         }
 
-        for (int i = 0; i < indice.size() - 1; i++) {
-            combinationsOfIndex.add(new ArrayList<>(indice));
-            temp = indice.get(i);
-            while (temp < lims.get(i)) {
-                temp++;
-                indice.set(i, temp);
-                combinationsOfIndex.add(new ArrayList<>(indice));
-            }
+        List<List<Move>> allCombinations =  Lists.cartesianProduct(groupedMovesAsList);
+        List<ImmutableList<Move>> immutableAllCombination = new ArrayList<>();
+        //change all sub-lists into immutable list
+        for (List<Move> moves:allCombinations){
+            immutableAllCombination.add(ImmutableList.copyOf(moves));
         }
+
+        allCombinations = validateMove(immutableAllCombination, board, getPlayerList(board));
+
         //TODO: combination algor
-        return ImmutableList.copyOf(allCombination);
+        return ImmutableList.copyOf(allCombinations);
+    }
+
+    public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, Board board, ImmutableList<Player> players){
+        ImmutableList<Player> initialPlayers = players;
+        Model model = copyOfModel(board, players);
+        List<ImmutableList<Move>> result = new ArrayList<>();
+        for (ImmutableList<Move> moves:movesList){
+            for (Move move:moves){
+                if (model.getCurrentBoard().getAvailableMoves().contains(move)){
+                    model.chooseMove(move); }
+                else break;;
+                result.add(moves);
+            }
+            model = copyOfModel(board, initialPlayers);
+        }
+        return ImmutableList.copyOf(result);
     }
 
     // eliminate unnecessary and expensive move
