@@ -360,37 +360,37 @@ public class MyAi implements Ai {
 
             // initialize, shortest distance of other nodes are all infinity
             // references: sion's lecture & princeton java source file for Dijkstra algorithm
-            // distances list : mapping each node with distance to currentNode
-            List<Double> distances = new ArrayList<>();
+            // warehouseOfDistance list : mapping each node with distance to currentNode
+            List<Double> warehouseOfDistance = new ArrayList<>();
 
             for (int i = 0; i < listOfUnevaluatedNodes.size(); i++) {
-                distances.set(i, Double.POSITIVE_INFINITY);
+                warehouseOfDistance.set(i, Double.POSITIVE_INFINITY);
             }
-            distances.set(locationOfMrx, 0.0);
+            warehouseOfDistance.set(locationOfMrx, 0.0);
 
             // starting calculation until we find the shortest distance
             Integer currentNode = locationOfMrx;
             while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
                 // select a new currentNode with shortest distance(under current circumstance)
-                currentNode = nodeWithShortestDistance(distances);
+                currentNode = nodeWithShortestDistance(warehouseOfDistance);
 
                 List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
 
                 // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
                 for(Integer node: adjNodes) {
                     // cuz all paths' weight equal to 1
-                    double ValueOfExtendShortestPath = distances.get(currentNode) + 1;
+                    double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
                     // check whether currentNode is the shortest one
-                    if (ValueOfExtendShortestPath < distances.get(node) && listOfUnevaluatedNodes.contains(node)) {
-                        distances.set(node, ValueOfExtendShortestPath);
+                    if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
+                        warehouseOfDistance.set(node, ValueOfExtendShortestPath);
                     }
                 }
                 // never go through this node again
-                distances.set(currentNode, Double.NEGATIVE_INFINITY);
+                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
                 listOfUnevaluatedNodes.remove(currentNode);
             }
-            // sum up the distances
-            scoreOfBoard += distances.get(detectiveLocation);
+            // sum up the warehouseOfDistance
+            scoreOfBoard += warehouseOfDistance.get(detectiveLocation);
         }
         // TODO: should we just use reciprocal ?
         return scoreOfBoard/((double) detectives.size());
@@ -399,18 +399,18 @@ public class MyAi implements Ai {
 
     // TODO: maybe do some optimization ?
     // find a node which got shortest distance
-    private Integer nodeWithShortestDistance(List<Double> distances) {
+    private Integer nodeWithShortestDistance(List<Double> warehouseOfDistance) {
         int indexOfShortestNode = 0;
-        for (int i = 0; i < distances.size(); i++) {
-            if (distances.get(indexOfShortestNode) > distances.get(i)) {
+        for (int i = 0; i < warehouseOfDistance.size(); i++) {
+            if (warehouseOfDistance.get(indexOfShortestNode) > warehouseOfDistance.get(i)) {
                 indexOfShortestNode = i;
             }
         }
         return indexOfShortestNode;
     }
 
-    private void ifNodeValid(List<Double> distances, int v) {
-        int sizeOfDistances = distances.size();
+    private void ifNodeValid(List<Double> warehouseOfDistance, int v) {
+        int sizeOfDistances = warehouseOfDistance.size();
         if (v < 0 || v >= sizeOfDistances)
             throw new IllegalArgumentException("error");
     }
