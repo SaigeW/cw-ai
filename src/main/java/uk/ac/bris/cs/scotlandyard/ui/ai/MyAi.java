@@ -106,13 +106,14 @@ public class MyAi implements Ai {
             ImmutableList<List<Move>> combinations = combinationOfMoves(model.getCurrentBoard(),
                     getDetectives(getPlayerList(model.getCurrentBoard())));
 
-            Model nextModel;
 
             for (List<Move> combination : combinations) {
+                Model nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
                 for (Move move : combination) {
                     nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
                     nextModel.chooseMove(move);
                 }
+
                 Vertex child = new Vertex(nextModel);
                 child.move = move;
                 currentNode.addChild(child);
@@ -295,7 +296,6 @@ public class MyAi implements Ai {
     }
 
     public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, Board board, ImmutableList<Player> players){
-        ImmutableList<Player> initialPlayers = players;
         Model model = copyOfModel(board, players);
         List<ImmutableList<Move>> result = new ArrayList<>();
         for (ImmutableList<Move> moves:movesList){
@@ -305,7 +305,7 @@ public class MyAi implements Ai {
                 else break;;
                 result.add(moves);
             }
-            model = copyOfModel(board, initialPlayers);
+            model = copyOfModel(board, players);
         }
         return ImmutableList.copyOf(result);
     }
