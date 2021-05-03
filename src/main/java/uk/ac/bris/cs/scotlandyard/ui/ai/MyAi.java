@@ -1,17 +1,21 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
+import com.esotericsoftware.minlog.Log;
 import com.google.common.collect.Lists;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.*;
 import io.atlassian.fugue.Pair;
 import org.checkerframework.checker.units.qual.A;
+import uk.ac.bris.cs.scotlandyard.event.ImmutableSelectMove;
 import uk.ac.bris.cs.scotlandyard.model.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.zip.DeflaterOutputStream;
 
 public class MyAi implements Ai {
 
@@ -57,12 +61,18 @@ public class MyAi implements Ai {
         }
         // currently haven't been reach lowest level of tree
         if (isMax) {
+
             List<Move> moves = model.getCurrentBoard().getAvailableMoves().asList();
 
             if (!moves.isEmpty()) {
 
                 // if it's mrX' turn, set maximum sore to node & update alpha.
                 double scoreOfMax = Double.NEGATIVE_INFINITY;
+
+                //elimination
+                moves = elimination(moves);
+                moves = eliminationForDoubleMove(moves);
+
                 // continuing going left at first
                 Model nextModel;
                 for (Move move : moves) {
@@ -98,14 +108,15 @@ public class MyAi implements Ai {
                 currentNode.setScore(score);
                 return score;
             }
-        } else {
+        }
+        else {
+            if (!model.getCurrentBoard().getWinner().isEmpty()) return winnerScore(model.getCurrentBoard());
             // if it's detective' turn, set minimum sore to node & update beta.
             double minScore = Double.POSITIVE_INFINITY;
 
             // TODO: how to generate moves with bunch of detectives?
             ImmutableList<List<Move>> combinations = combinationOfMoves(model.getCurrentBoard(),
                     getDetectives(getPlayerList(model.getCurrentBoard())));
-
 
             for (List<Move> combination : combinations) {
                 Model nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
@@ -205,7 +216,6 @@ public class MyAi implements Ai {
     }
 
 
-
     public ImmutableList<Player> getPlayerList(Board board) {
         List<Player> allPlayers = new ArrayList<>();
         for (Piece p : board.getPlayers()) {
@@ -270,12 +280,7 @@ public class MyAi implements Ai {
 
     public ImmutableList<List<Move>> combinationOfMoves(Board board, ImmutableList<Player> detectives) {
         Set<Move> allMoves = board.getAvailableMoves();
-        HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
-
-        for (Player d : detectives) {
-            groupedMoves.put(d.piece(), new ArrayList<Move>());
-        }
-        for (Move move : allMoves) groupedMoves.get(move.commencedBy()).add(move);
+        HashMap<Piece, List<Move>> groupedMoves = groupedMoves(board, detectives);
 
         List<List<Move>> groupedMovesAsList = new ArrayList<>();
         for (Player d : detectives) {
@@ -295,14 +300,25 @@ public class MyAi implements Ai {
         return ImmutableList.copyOf(allCombinations);
     }
 
+    public HashMap<Piece, List<Move>> groupedMoves(Board board, ImmutableList<Player> detectives){
+        Set<Move> allMoves = board.getAvailableMoves();
+        HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
+        for (Player d : detectives) {
+            groupedMoves.put(d.piece(), new ArrayList<Move>());
+        }
+        for (Move move : allMoves) groupedMoves.get(move.commencedBy()).add(move);
+        return groupedMoves;
+    }
+
     public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, Board board, ImmutableList<Player> players){
         Model model = copyOfModel(board, players);
         List<ImmutableList<Move>> result = new ArrayList<>();
         for (ImmutableList<Move> moves:movesList){
             for (Move move:moves){
                 if (model.getCurrentBoard().getAvailableMoves().contains(move)){
-                    model.chooseMove(move); }
-                else break;;
+                    model.chooseMove(move);
+                }
+                else break;
                 result.add(moves);
             }
             model = copyOfModel(board, players);
@@ -311,7 +327,7 @@ public class MyAi implements Ai {
     }
 
     // eliminate unnecessary and expensive move
-    public ImmutableList<Move> elimination(ImmutableList<Move> moves) {
+    public ImmutableList<Move> elimination(List<Move> moves) {
         ArrayList<Move> finalMoves = new ArrayList<>();
         ArrayList<Move> secretMoves = new ArrayList<>();
         //destinations of bus/underground moves
@@ -336,7 +352,7 @@ public class MyAi implements Ai {
         return ImmutableList.copyOf(finalMoves);
     }
 
-    public ImmutableList<Move> eliminationForDoubleMove(ImmutableList<Move> moves) {
+    public ImmutableList<Move> eliminationForDoubleMove(List<Move> moves) {
         ArrayList<Move> finalMoves = new ArrayList<>();
         ArrayList<Move> doubleSecretMoves = new ArrayList<>();
         //destinations of bus/underground moves
@@ -360,11 +376,23 @@ public class MyAi implements Ai {
 
     // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
-    private double scoring(Board board, int locationOfMrx, ImmutableList<Player> detectives) {
+    private double scoring(Board board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
         int scoreOfBoard = 0;
+        HashMap<Piece, Double> scoreBoard = new HashMap<>();
+
+        // check whether a detective cannot move.
+        List<Player> detectives = new ArrayList<>(immutableDetectives);
+        HashMap<Piece, List<Move>> validMoves = groupedMoves(board, immutableDetectives);
+
+        for (Player d : immutableDetectives) {
+            if (validMoves.get(d.piece()).isEmpty()) {
+                detectives.remove(d);
+            }
+        }
 
         // iterate through list of detectives to find the shortest distance for each detective
         for (Player detective : detectives) {
+
             int detectiveLocation = detective.location();
 
             // using a list to store listOfUnevaluatedNodes
@@ -401,11 +429,44 @@ public class MyAi implements Ai {
                 warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
                 listOfUnevaluatedNodes.remove(currentNode);
             }
-            // sum up the warehouseOfDistance
-            scoreOfBoard += warehouseOfDistance.get(detectiveLocation);
+            // store each distances
+            scoreBoard.put(detective.piece(), warehouseOfDistance.get(detectiveLocation));
         }
-        // TODO: should we just use reciprocal ?
+        // TODO: modify score with hashmap
         return scoreOfBoard/((double) detectives.size());
+    }
+
+    private double baseScoreCalculator(List<Integer> distances, Board board){
+        if (!board.getWinner().isEmpty()){
+           return winnerScore(board);
+        }
+        double base = 10000;
+        for(Integer x:distances){
+            base -= quadraticF(1/x);
+        }
+
+        List<LogEntry> logs = board.getMrXTravelLog();
+        List<Boolean> rounds = board.getSetup().rounds;
+        LogEntry revealedEntry = null;
+        int p =logs.size()-1;
+        while(p!=0){
+            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
+            p--;
+        }
+        if(revealedEntry.ticket().equals(Ticket.SECRET))
+            base += 800;
+        return base;
+    }
+
+    private Double winnerScore(Board board){
+        if(board.getWinner().contains(Piece.MrX.MRX)){
+            return Double.POSITIVE_INFINITY;
+            }
+        else return Double.NEGATIVE_INFINITY;
+    }
+
+    private int quadraticF(int x){
+        return 1500*x*x;
     }
 
 
@@ -426,5 +487,4 @@ public class MyAi implements Ai {
         if (v < 0 || v >= sizeOfDistances)
             throw new IllegalArgumentException("error");
     }
-
 }
