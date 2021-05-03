@@ -40,7 +40,7 @@ public class MyAi implements Ai {
         Tree tree = new Tree(copiedModel);
 
         int depth = 4;
-        double score = minimax(tree.startNode, Model copiedModel, depth, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+        double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         // TODO: how to coordinate board during recursion & from score to move
 // 		List<Move> moves = board.getAvailableMoves().asList();
@@ -81,7 +81,7 @@ public class MyAi implements Ai {
                     nextModel.chooseMove(move);
                     // update child node
                     Vertex child = new Vertex(nextModel);
-                    child.move = move;
+                    child.setMove(move);
                     currentNode.addChild(child);
                     // calculate & set the scores for each child node.
                     double scoreOfChild = minimax(child, nextModel, depth + 1, false, alpha, beta);
@@ -126,7 +126,6 @@ public class MyAi implements Ai {
                 }
 
                 Vertex child = new Vertex(nextModel);
-                child.move = move;
                 currentNode.addChild(child);
 
                 double childScore = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
@@ -170,10 +169,6 @@ public class MyAi implements Ai {
             this.currentBoard = currentBoard;
         }
 
-        private Model getCurrentBoard() {
-            return this.currentBoard;
-        }
-
         private List<Vertex> getChildren() {
             return this.children;
         }
@@ -190,14 +185,7 @@ public class MyAi implements Ai {
             this.move = move;
         }
     }
-
-    private class dVertex extends Vertex {
-
-        private dVertex(Model currentBoard) {
-            super(currentBoard);
-        }
-
-    }
+    
 
 
     // using visitor pattern to get destination of each availableMoves
