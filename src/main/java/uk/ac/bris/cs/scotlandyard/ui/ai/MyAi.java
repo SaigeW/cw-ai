@@ -1,21 +1,15 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
-import com.esotericsoftware.minlog.Log;
-import com.google.common.collect.Lists;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.*;
-import io.atlassian.fugue.Pair;
-import org.checkerframework.checker.units.qual.A;
-import uk.ac.bris.cs.scotlandyard.event.ImmutableSelectMove;
-import uk.ac.bris.cs.scotlandyard.model.*;
-import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.*;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import io.atlassian.fugue.Pair;
+import uk.ac.bris.cs.scotlandyard.model.*;
+import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket;
 
 import javax.annotation.Nonnull;
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.zip.DeflaterOutputStream;
 
 public class MyAi implements Ai {
 
@@ -35,6 +29,13 @@ public class MyAi implements Ai {
         ImmutableList<Player> allPlayers = getPlayerList(board);
         Player mrX = getMrX(allPlayers);
         ImmutableList<Player> detectives = getDetectives(allPlayers);
+
+//        System.out.println(mrX);
+//        System.out.println(detectives);
+        if (board.getSetup().rounds.isEmpty()){
+            System.out.println("---------------------------------");
+        }
+
         Model copiedModel = copyOfModel(board, allPlayers);
 
         Tree tree = new Tree(copiedModel);
@@ -55,7 +56,10 @@ public class MyAi implements Ai {
 
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
-            double score = scoring(model.getCurrentBoard(), );
+
+            ImmutableList<Player> players = getPlayerList(currentBoard);
+            double score = scoring(model.getCurrentBoard(), getMrX(players).location(), getDetectives(players));
+
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
             return score;
         }
@@ -104,7 +108,7 @@ public class MyAi implements Ai {
             }
             // cannot make any move
             else {
-                double score = scoring(model, );
+                double score = winnerScore(currentBoard);
                 currentNode.setScore(score);
                 return score;
             }
@@ -128,7 +132,7 @@ public class MyAi implements Ai {
                 Vertex child = new Vertex(nextModel);
                 currentNode.addChild(child);
 
-                double childScore = minimax(child, mrXLocation, detectives, remainingDepth - 1, alpha, beta);
+                double childScore = minimax(child, nextModel, depth - 1, true, alpha, beta);
                 minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
                 currentNode.setScore(minScore);
 
@@ -185,7 +189,7 @@ public class MyAi implements Ai {
             this.move = move;
         }
     }
-    
+
 
 
     // using visitor pattern to get destination of each availableMoves
@@ -260,6 +264,7 @@ public class MyAi implements Ai {
     }
 
     // build a copy of current board
+    // TODO: debug
     public Model copyOfModel(Board board, ImmutableList<Player> players) {
         Player mrX = getMrX(players);
         ImmutableList<Player> detectives = getDetectives(players);
@@ -365,8 +370,7 @@ public class MyAi implements Ai {
     // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
     private double scoring(Board board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
-        int scoreOfBoard = 0;
-        HashMap<Piece, Double> scoreBoard = new HashMap<>();
+        List<Double> distances = new ArrayList<>();
 
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
@@ -418,21 +422,20 @@ public class MyAi implements Ai {
                 listOfUnevaluatedNodes.remove(currentNode);
             }
             // store each distances
-            scoreBoard.put(detective.piece(), warehouseOfDistance.get(detectiveLocation));
+            distances.addAll(warehouseOfDistance);
         }
         // TODO: modify score with hashmap
-        return scoreOfBoard/((double) detectives.size());
+        return baseScoreCalculator(distances, board);
     }
 
-    private double baseScoreCalculator(List<Integer> distances, Board board){
+    private double baseScoreCalculator(List<Double> distances, Board board){
         if (!board.getWinner().isEmpty()){
            return winnerScore(board);
         }
         double base = 10000;
-        for(Integer x:distances){
+        for(Double x : distances){
             base -= quadraticF(1/x);
         }
-
         List<LogEntry> logs = board.getMrXTravelLog();
         List<Boolean> rounds = board.getSetup().rounds;
         LogEntry revealedEntry = null;
@@ -453,7 +456,7 @@ public class MyAi implements Ai {
         else return Double.NEGATIVE_INFINITY;
     }
 
-    private int quadraticF(int x){
+    private Double quadraticF(Double x){
         return 1500*x*x;
     }
 
