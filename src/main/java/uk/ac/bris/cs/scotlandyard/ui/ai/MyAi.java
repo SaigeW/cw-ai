@@ -2,6 +2,7 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
@@ -11,12 +12,15 @@ import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import uk.ac.bris.cs.scotlandyard.ui.ai.MyGameStateFactory;
+import uk.ac.bris.cs.scotlandyard.ui.ai.MyGameStateFactory.MyGameState;
+
 public class MyAi implements Ai {
 
     @Nonnull
     @Override
     public String name() {
-        return "MyAi";
+        return "Ikea Shasha";
     }
 
 
@@ -27,21 +31,22 @@ public class MyAi implements Ai {
             Pair<Long, TimeUnit> timeoutPair) {
         // create list of players update with current status
         ImmutableList<Player> allPlayers = getPlayerList(board);
-        Player mrX = getMrX(allPlayers);
-        ImmutableList<Player> detectives = getDetectives(allPlayers);
+//        Player mrX = getMrX(allPlayers);
+//        ImmutableList<Player> detectives = getDetectives(allPlayers);
+        //System.out.format(String.valueOf(detectives));
+        //System.out.format(String.valueOf(mrX));
 
 //        System.out.println(mrX);
 //        System.out.println(detectives);
-        if (board.getSetup().rounds.isEmpty()){
-            System.out.println("---------------------------------");
-        }
 
-        Model copiedModel = copyOfModel(board, allPlayers);
+        MyGameState copiedModel = copyOfModel(board, allPlayers);
 
         Tree tree = new Tree(copiedModel);
 
         int depth = 4;
         double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+        System.out.print(score);
+        System.out.print("");
 
         // TODO: how to coordinate board during recursion & from score to move
 // 		List<Move> moves = board.getAvailableMoves().asList();
@@ -49,24 +54,26 @@ public class MyAi implements Ai {
         return getBestMove(tree, score);
     }
 
-    private double minimax(Vertex currentNode, Model model, int depth, boolean isMax, double alpha, double beta) {
+    private double minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
 
         // currentBoard is actually a model object
-        Board currentBoard = model.getCurrentBoard();
+        //Board currentBoard = model.getCurrentBoard();
 
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
 
-            ImmutableList<Player> players = getPlayerList(currentBoard);
-            double score = scoring(model.getCurrentBoard(), getMrX(players).location(), getDetectives(players));
+            ImmutableList<Player> players = model.getDetectivesAsPlayer();
+            double score = scoring(model, model.getMrX().location(), getDetectives(players));
 
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
+            System.out.print(score);
+            System.out.print("");
             return score;
         }
         // currently haven't been reach lowest level of tree
         if (isMax) {
 
-            List<Move> moves = model.getCurrentBoard().getAvailableMoves().asList();
+            List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
 
             if (!moves.isEmpty()) {
 
@@ -78,11 +85,11 @@ public class MyAi implements Ai {
                 moves = eliminationForDoubleMove(moves);
 
                 // continuing going left at first
-                Model nextModel;
+                MyGameState nextModel;
                 for (Move move : moves) {
                     // TODO: how to advance ?
-                    nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
-                    nextModel.chooseMove(move);
+                    nextModel = copyOfModel(model);
+                    nextModel = nextModel.advance(move);
                     // update child node
                     Vertex child = new Vertex(nextModel);
                     child.setMove(move);
@@ -108,25 +115,24 @@ public class MyAi implements Ai {
             }
             // cannot make any move
             else {
-                double score = winnerScore(currentBoard);
+                double score = winnerScore(model);
                 currentNode.setScore(score);
                 return score;
             }
         }
         else {
-            if (!model.getCurrentBoard().getWinner().isEmpty()) return winnerScore(model.getCurrentBoard());
+            if (!model.getWinner().isEmpty()) return winnerScore(model);
             // if it's detective' turn, set minimum sore to node & update beta.
             double minScore = Double.POSITIVE_INFINITY;
 
             // TODO: how to generate moves with bunch of detectives?
-            ImmutableList<List<Move>> combinations = combinationOfMoves(model.getCurrentBoard(),
-                    getDetectives(getPlayerList(model.getCurrentBoard())));
+            ImmutableList<List<Move>> combinations = combinationOfMoves(model);
 
             for (List<Move> combination : combinations) {
-                Model nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
+                MyGameState nextModel = copyOfModel(model);
                 for (Move move : combination) {
-                    nextModel = copyOfModel(currentBoard, getPlayerList(currentBoard));
-                    nextModel.chooseMove(move);
+                    nextModel = copyOfModel(model);
+                    nextModel = nextModel.advance(move);
                 }
 
                 Vertex child = new Vertex(nextModel);
@@ -153,7 +159,7 @@ public class MyAi implements Ai {
 
         private final Vertex startNode;
 
-        public Tree(Model currentBoard) {
+        public Tree(MyGameState currentBoard) {
             this.startNode = new Vertex(currentBoard);
         }
 
@@ -165,11 +171,11 @@ public class MyAi implements Ai {
     // father & children vertex , current state, current score, move
     private class Vertex {
         private List<Vertex> children = new ArrayList<>();
-        private Model currentBoard;
+        private MyGameState currentBoard;
         private double score;
         private Move move;
 
-        private Vertex(Model currentBoard) {
+        private Vertex(MyGameState currentBoard) {
             this.currentBoard = currentBoard;
         }
 
@@ -211,24 +217,44 @@ public class MyAi implements Ai {
     public ImmutableList<Player> getPlayerList(Board board) {
         List<Player> allPlayers = new ArrayList<>();
         for (Piece p : board.getPlayers()) {
+
             // iterate through all players
             Optional<Board.TicketBoard> tempTicketBoardForEach = board.getPlayerTickets(p);
             HashMap<Ticket, Integer> theTicketMap = new HashMap<>();
-
-            // update tickets for every player
-            if (tempTicketBoardForEach.isPresent()) {
-                Board.TicketBoard mid = tempTicketBoardForEach.get();
-                for (Ticket t : Ticket.values()) {
-                    theTicketMap.put(t, mid.getCount(t));
-                }
-            }
-            ImmutableMap<Ticket, Integer> tempMap = ImmutableMap.copyOf(theTicketMap);
+            theTicketMap.put(Ticket.DOUBLE, board.getPlayerTickets(p).get().getCount(Ticket.DOUBLE));
+            theTicketMap.put(Ticket.BUS, board.getPlayerTickets(p).get().getCount(Ticket.BUS));
+            theTicketMap.put(Ticket.UNDERGROUND, board.getPlayerTickets(p).get().getCount(Ticket.UNDERGROUND));
+            theTicketMap.put(Ticket.SECRET, board.getPlayerTickets(p).get().getCount(Ticket.SECRET));
+            theTicketMap.put(Ticket.TAXI, board.getPlayerTickets(p).get().getCount(Ticket.TAXI));
 
             // get player location
             // TODO: if whether getAvailableMoves is empty?
-            int locationOfPlayer = board.getAvailableMoves().asList().get(0).source();
+            int locationOfPlayer = 0;
+            if(p.isMrX()){locationOfPlayer = board.getAvailableMoves().iterator().next().source();}
+            else {
+                theTicketMap.remove(Ticket.DOUBLE);
+                theTicketMap.remove(Ticket.SECRET);
+                String color = p.webColour();
+                switch (color) {
+                    case "#f00":
+                        locationOfPlayer = board.getDetectiveLocation(Piece.Detective.RED).get();
+                        break;
+                    case "#0f0":
+                        locationOfPlayer = board.getDetectiveLocation(Piece.Detective.GREEN).get();
+                        break;
+                    case "#00f":
+                        locationOfPlayer = board.getDetectiveLocation(Piece.Detective.BLUE).get();
+                        break;
+                    case "#fff":
+                        locationOfPlayer = board.getDetectiveLocation(Piece.Detective.WHITE).get();
+                        break;
+                    case "#ff0":
+                        locationOfPlayer = board.getDetectiveLocation(Piece.Detective.YELLOW).get();
+                }
+            }
 
-            Player temp = new Player(p, tempMap, locationOfPlayer);
+
+            Player temp = new Player(p, ImmutableMap.copyOf(theTicketMap), locationOfPlayer);
             allPlayers.add(temp);
         }
         return ImmutableList.copyOf(allPlayers);
@@ -265,14 +291,21 @@ public class MyAi implements Ai {
 
     // build a copy of current board
     // TODO: debug
-    public Model copyOfModel(Board board, ImmutableList<Player> players) {
+    public MyGameState copyOfModel(Board board, ImmutableList<Player> players) {
         Player mrX = getMrX(players);
         ImmutableList<Player> detectives = getDetectives(players);
-        return new MyModelFactory().build(board.getSetup(), mrX, detectives);
+        MyGameStateFactory factory = new MyGameStateFactory();
+        return factory.build(board.getSetup(), mrX, detectives);
     }
 
-    public ImmutableList<List<Move>> combinationOfMoves(Board board, ImmutableList<Player> detectives) {
+    public MyGameState copyOfModel(MyGameState gameState){
+        MyGameStateFactory factory = new MyGameStateFactory();
+        return factory.build(gameState.getSetup(), gameState.getMrX(),gameState.getDetectivesAsPlayer());
+    }
+
+    public ImmutableList<List<Move>> combinationOfMoves(MyGameState board) {
         Set<Move> allMoves = board.getAvailableMoves();
+        ImmutableList<Player> detectives = board.getDetectivesAsPlayer();
         HashMap<Piece, List<Move>> groupedMoves = groupedMoves(board, detectives);
 
         List<List<Move>> groupedMovesAsList = new ArrayList<>();
@@ -287,13 +320,13 @@ public class MyAi implements Ai {
             immutableAllCombination.add(ImmutableList.copyOf(moves));
         }
 
-        allCombinations = validateMove(immutableAllCombination, board, getPlayerList(board));
+        allCombinations = validateMove(immutableAllCombination, board, board.getPlayersAsPlayer());
 
         //TODO: combination algor
         return ImmutableList.copyOf(allCombinations);
     }
 
-    public HashMap<Piece, List<Move>> groupedMoves(Board board, ImmutableList<Player> detectives){
+    public HashMap<Piece, List<Move>> groupedMoves(MyGameState board, ImmutableList<Player> detectives){
         Set<Move> allMoves = board.getAvailableMoves();
         HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
         for (Player d : detectives) {
@@ -303,21 +336,21 @@ public class MyAi implements Ai {
         return groupedMoves;
     }
 
-    public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, Board board, ImmutableList<Player> players){
-        Model model = copyOfModel(board, players);
+    public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, MyGameState board, ImmutableList<Player> players){
+        MyGameState model = copyOfModel(board);
         List<ImmutableList<Move>> result = new ArrayList<>();
         for (ImmutableList<Move> moves:movesList){
             for (Move move:moves){
-                if (model.getCurrentBoard().getAvailableMoves().contains(move)){
-                    model.chooseMove(move);
+                if (model.getAvailableMoves().contains(move)){
+                    model = model.advance(move);
                 }
                 else break;
                 result.add(moves);
             }
-            model = copyOfModel(board, players);
+            model = copyOfModel(board);
         }
         return ImmutableList.copyOf(result);
-    }
+   }
 
     // eliminate unnecessary and expensive move
     public ImmutableList<Move> elimination(List<Move> moves) {
@@ -369,15 +402,14 @@ public class MyAi implements Ai {
 
     // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
-    private double scoring(Board board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
+    private double scoring(MyGameState board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
         List<Double> distances = new ArrayList<>();
 
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
-        HashMap<Piece, List<Move>> validMoves = groupedMoves(board, immutableDetectives);
 
         for (Player d : immutableDetectives) {
-            if (validMoves.get(d.piece()).isEmpty()) {
+            if (board.makeSingleMoves(board.getSetup(), board.getDetectivesAsPlayer(), d, d.location()).isEmpty()) {
                 detectives.remove(d);
             }
         }
@@ -428,7 +460,7 @@ public class MyAi implements Ai {
         return baseScoreCalculator(distances, board);
     }
 
-    private double baseScoreCalculator(List<Double> distances, Board board){
+    private double baseScoreCalculator(List<Double> distances, MyGameState board){
         if (!board.getWinner().isEmpty()){
            return winnerScore(board);
         }
@@ -449,7 +481,7 @@ public class MyAi implements Ai {
         return base;
     }
 
-    private Double winnerScore(Board board){
+    private Double winnerScore(MyGameState board){
         if(board.getWinner().contains(Piece.MrX.MRX)){
             return Double.POSITIVE_INFINITY;
             }
