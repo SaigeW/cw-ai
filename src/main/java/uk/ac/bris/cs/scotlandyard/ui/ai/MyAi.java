@@ -133,12 +133,9 @@ public class MyAi implements Ai {
                 nextModel = copyOfModel(model);
                 for (Move move : combination) {
                     if(!nextModel.getAvailableMoves().contains(move)){
-                        continue;
+                        break;
                     }
-                    else{
-                    nextModel = copyOfModel(model);
                     nextModel = nextModel.advance(move);
-                    }
                 }
 
                 Vertex child = new Vertex(nextModel);
