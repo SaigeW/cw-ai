@@ -43,7 +43,7 @@ public class MyAi implements Ai {
 
         Tree tree = new Tree(copiedModel);
 
-        int depth = 4;
+        int depth = 2;
         double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         // TODO: how to coordinate board during recursion & from score to move
@@ -82,8 +82,8 @@ public class MyAi implements Ai {
                 double scoreOfMax = Double.NEGATIVE_INFINITY;
 
                 //elimination
-                moves = elimination(moves);
-                moves = eliminationForDoubleMove(moves);
+//                moves = elimination(moves);
+//                moves = eliminationForDoubleMove(moves);
 
                 // continuing going left at first
                 MyGameState nextModel;
@@ -129,14 +129,18 @@ public class MyAi implements Ai {
             ImmutableList<List<Move>> combinations = combinationOfMoves(model);
 
             MyGameState nextModel;
+            boolean invalidMove;
             for (List<Move> combination : combinations) {
                 nextModel = copyOfModel(model);
+                invalidMove = false;
                 for (Move move : combination) {
-                    if(!nextModel.getAvailableMoves().contains(move)){
-                        break;
-                    }
+                    if (nextModel.getAvailableMoves().isEmpty()){break;}
+                    if (!nextModel.getAvailableMoves().contains(move)){
+                        invalidMove = true;
+                        break; }
                     nextModel = nextModel.advance(move);
                 }
+                if (invalidMove) continue;
 
                 Vertex child = new Vertex(nextModel);
                 currentNode.addChild(child);
@@ -341,69 +345,54 @@ public class MyAi implements Ai {
         return groupedMoves;
     }
 
-    public List<List<Move>> validateMove(List<ImmutableList<Move>> movesList, MyGameState board, ImmutableList<Player> players){
-        MyGameState model = copyOfModel(board);
-        List<ImmutableList<Move>> result = new ArrayList<>();
-        for (ImmutableList<Move> moves:movesList){
-            for (Move move:moves){
-                if (model.getAvailableMoves().contains(move)){
-                    model = model.advance(move);
-                }
-                else break;
-                result.add(moves);
-            }
-            model = copyOfModel(board);
-        }
-        return ImmutableList.copyOf(result);
-   }
 
     // eliminate unnecessary and expensive move
-    public ImmutableList<Move> elimination(List<Move> moves) {
-        ArrayList<Move> finalMoves = new ArrayList<>();
-        ArrayList<Move> secretMoves = new ArrayList<>();
-        //destinations of bus/underground moves
-        ArrayList<Integer> destinations = new ArrayList<>();
-        ArrayList<Move> otherMoves = new ArrayList<>();
-        for (Move move : moves) {
+//    public ImmutableList<Move> elimination(List<Move> moves) {
+//        ArrayList<Move> finalMoves = new ArrayList<>();
+//        ArrayList<Move> secretMoves = new ArrayList<>();
+//        //destinations of bus/underground moves
+//        ArrayList<Integer> destinations = new ArrayList<>();
+//        ArrayList<Move> otherMoves = new ArrayList<>();
+//        for (Move move : moves) {
+//
+//            //only if it is secret and it is not double move
+//            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
+//                    !move.tickets().iterator().hasNext()) secretMoves.add(move);
+//            else {
+//                otherMoves.add(move);
+//                destinations.add(getDestination(move));
+//            }
+//        }
+//
+//        for (Move move : secretMoves) {
+//            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
+//        }
+//        finalMoves.addAll(otherMoves);
+//
+//        return ImmutableList.copyOf(finalMoves);
+//    }
 
-            //only if it is secret and it is not double move
-            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
-                    !move.tickets().iterator().hasNext()) secretMoves.add(move);
-            else {
-                otherMoves.add(move);
-                destinations.add(getDestination(move));
-            }
-        }
-
-        for (Move move : secretMoves) {
-            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
-        }
-        finalMoves.addAll(otherMoves);
-
-        return ImmutableList.copyOf(finalMoves);
-    }
-
-    public ImmutableList<Move> eliminationForDoubleMove(List<Move> moves) {
-        ArrayList<Move> finalMoves = new ArrayList<>();
-        ArrayList<Move> doubleSecretMoves = new ArrayList<>();
-        //destinations of bus/underground moves
-        ArrayList<Integer> destinations = new ArrayList<>();
-        ArrayList<Move> otherMoves = new ArrayList<>();
-        for (Move move : moves) {
-            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
-                    move.tickets().iterator().next().equals(Ticket.SECRET)) {
-                doubleSecretMoves.add(move);
-            } else {
-                otherMoves.add(move);
-                destinations.add(getDestination(move));
-            }
-        }
-        for (Move move : doubleSecretMoves) {
-            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
-        }
-        finalMoves.addAll(otherMoves);
-        return ImmutableList.copyOf(finalMoves);
-    }
+//    public ImmutableList<Move> eliminationForDoubleMove(List<Move> moves) {
+//        ArrayList<Move> finalMoves = new ArrayList<>();
+//        ArrayList<Move> doubleSecretMoves = new ArrayList<>();
+//        //destinations of bus/underground moves
+//        ArrayList<Integer> destinations = new ArrayList<>();
+//        ArrayList<Move> otherMoves = new ArrayList<>();
+//        for (Move move : moves) {
+//            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
+//                    move.tickets().iterator().next().equals(Ticket.SECRET)) {
+//                doubleSecretMoves.add(move);
+//            } else {
+//                otherMoves.add(move);
+//                destinations.add(getDestination(move));
+//            }
+//        }
+//        for (Move move : doubleSecretMoves) {
+//            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
+//        }
+//        finalMoves.addAll(otherMoves);
+//        return ImmutableList.copyOf(finalMoves);
+//    }
 
     // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
@@ -413,63 +402,64 @@ public class MyAi implements Ai {
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
 
-//        for (Player d : immutableDetectives) {
-//            if (board.makeSingleMoves(board.getSetup(), board.getDetectivesAsPlayer(), d, d.location()).isEmpty()) {
-//                detectives.remove(d);
-//            }
-//        }
-//
-//        // iterate through list of detectives to find the shortest distance for each detective
-//        for (Player detective : detectives) {
-//
-//            int detectiveLocation = detective.location();
-//
-//            // using a list to store listOfUnevaluatedNodes
-//            List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
-//
-//            // initialize, shortest distance of other nodes are all infinity
-//            // references: sion's lecture & princeton java source file for Dijkstra algorithm
-//            // warehouseOfDistance list : mapping each node with distance to currentNode
-//            List<Double> warehouseOfDistance = new ArrayList<>();
-//
-//
-//            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
-//                warehouseOfDistance.add(Double.POSITIVE_INFINITY);
-//            }
-//
-//            warehouseOfDistance.set(locationOfMrx, 0.0);
-//
-//            // starting calculation until we find the shortest distance
-//            Integer currentNode = locationOfMrx;
-//            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
-//                // select a new currentNode with shortest distance(under current circumstance)
-//                currentNode = nodeWithShortestDistance(warehouseOfDistance);
-//
-//                List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
-//
-//                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
-//                for(Integer node: adjNodes) {
-//                    // cuz all paths' weight equal to 1
-//                    double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
-//                    // check whether currentNode is the shortest one
-//                    if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
-//                        warehouseOfDistance.set(node, ValueOfExtendShortestPath);
-//                    }
-//                }
-//                // never go through this node again
-//                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
-//                listOfUnevaluatedNodes.remove(currentNode);
-//            }
-//            // store each distances
-//            distances.addAll(warehouseOfDistance);
-//        }
-        // TODO: modify score with hashmap
+        for (Player d : immutableDetectives) {
+            if (board.makeSingleMoves(board.getSetup(), board.getDetectivesAsPlayer(), d, d.location()).isEmpty()) {
+                detectives.remove(d);
+            }
+        }
 
-        int rangeMin = 0;
-        int rangeMax = 100000;
-        Random r = new Random();
-        double randomValue = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
-        return randomValue;
+        // iterate through list of detectives to find the shortest distance for each detective
+        for (Player detective : detectives) {
+
+            int detectiveLocation = detective.location();
+
+            // using a list to store listOfUnevaluatedNodes
+            List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
+
+            // initialize, shortest distance of other nodes are all infinity
+            // references: sion's lecture & princeton java source file for Dijkstra algorithm
+            // warehouseOfDistance list : mapping each node with distance to currentNode
+            List<Double> warehouseOfDistance = new ArrayList<>();
+
+
+            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
+                warehouseOfDistance.add(Double.POSITIVE_INFINITY);
+            }
+
+            warehouseOfDistance.set(locationOfMrx, 0.0);
+
+            // starting calculation until we find the shortest distance
+            Integer currentNode = locationOfMrx;
+            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
+                // select a new currentNode with shortest distance(under current circumstance)
+                currentNode = nodeWithShortestDistance(warehouseOfDistance);
+
+                List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
+
+                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
+                for(Integer node: adjNodes) {
+                    // cuz all paths' weight equal to 1
+                    double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
+                    // check whether currentNode is the shortest one
+                    if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
+                        warehouseOfDistance.set(node, ValueOfExtendShortestPath);
+                    }
+                }
+                // never go through this node again
+                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
+                listOfUnevaluatedNodes.remove(currentNode);
+            }
+            // store each distances
+            distances.addAll(warehouseOfDistance);
+        }
+//         TODO: modify score with hashmap
+
+//        int rangeMin = 0;
+//        int rangeMax = 100000;
+//        Random r = new Random();
+//        double randomValue = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
+//        return randomValue;
+        return baseScoreCalculator(distances, board);
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
