@@ -58,6 +58,7 @@ public class MyAi implements Ai {
         //Board currentBoard = model.getCurrentBoard();
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
         if (moves.isEmpty()) {
+            System.out.print("i reached here");
             double score = winnerScore(model);
             currentNode.setScore(score);
             return score;
@@ -67,10 +68,9 @@ public class MyAi implements Ai {
 
             ImmutableList<Player> players = model.getDetectivesAsPlayer();
             double score = scoring(model, model.getMrX().location(), getDetectives(players));
-
+            System.out.print("i reached depth");
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
-            System.out.print(score);
-            System.out.print("");
+
             return score;
         }
         // currently haven't been reach lowest level of tree
@@ -433,9 +433,11 @@ public class MyAi implements Ai {
             // warehouseOfDistance list : mapping each node with distance to currentNode
             List<Double> warehouseOfDistance = new ArrayList<>();
 
-            for (int i = 0; i < listOfUnevaluatedNodes.size(); i++) {
-                warehouseOfDistance.set(i, Double.POSITIVE_INFINITY);
+
+            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
+                warehouseOfDistance.add(Double.POSITIVE_INFINITY);
             }
+
             warehouseOfDistance.set(locationOfMrx, 0.0);
 
             // starting calculation until we find the shortest distance
@@ -462,6 +464,7 @@ public class MyAi implements Ai {
             // store each distances
             distances.addAll(warehouseOfDistance);
         }
+        System.out.print("i am out");
         // TODO: modify score with hashmap
         return baseScoreCalculator(distances, board);
     }
@@ -482,6 +485,7 @@ public class MyAi implements Ai {
             if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
             p--;
         }
+        System.out.print("i am out2");
         if(revealedEntry.ticket().equals(Ticket.SECRET))
             base += 800;
         return base;
