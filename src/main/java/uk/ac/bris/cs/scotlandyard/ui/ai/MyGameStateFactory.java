@@ -39,6 +39,16 @@ public class MyGameStateFactory{
         return new MyGameState(setup, players, ImmutableList.of(), mrX, detectives);
     }
 
+    public MyGameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives,
+                             ImmutableList<Player> remaining, ImmutableList<LogEntry> log){
+        List<Player> tempList = new ArrayList<>();
+        tempList.add(mrX);
+        tempList.addAll(detectives);
+        ImmutableList<Player> players = ImmutableList.copyOf(tempList);
+
+        return new MyGameState(setup, remaining, log, mrX, detectives);
+    }
+
 
       class MyGameState {
 
@@ -226,6 +236,7 @@ public class MyGameStateFactory{
             return Optional.empty();
         }
 
+        public ImmutableList<Player> getRemaining(){return remaining;}
 
 //        public Optional<Integer> getDetectiveLocation(Player detective) {
 //			/*

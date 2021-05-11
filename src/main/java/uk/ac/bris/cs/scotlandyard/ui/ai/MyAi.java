@@ -58,7 +58,6 @@ public class MyAi implements Ai {
         //Board currentBoard = model.getCurrentBoard();
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
         if (moves.isEmpty()) {
-            System.out.print("i reached here");
             double score = winnerScore(model);
             currentNode.setScore(score);
             return score;
@@ -68,7 +67,6 @@ public class MyAi implements Ai {
 
             ImmutableList<Player> players = model.getDetectivesAsPlayer();
             double score = scoring(model, model.getMrX().location(), getDetectives(players));
-            System.out.print("i reached depth");
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
 
             return score;
@@ -130,14 +128,17 @@ public class MyAi implements Ai {
             // TODO: how to generate moves with bunch of detectives?
             ImmutableList<List<Move>> combinations = combinationOfMoves(model);
 
+            MyGameState nextModel;
             for (List<Move> combination : combinations) {
-                MyGameState nextModel = copyOfModel(model);
+                nextModel = copyOfModel(model);
                 for (Move move : combination) {
                     if(!nextModel.getAvailableMoves().contains(move)){
                         continue;
                     }
+                    else{
                     nextModel = copyOfModel(model);
                     nextModel = nextModel.advance(move);
+                    }
                 }
 
                 Vertex child = new Vertex(nextModel);
@@ -305,7 +306,8 @@ public class MyAi implements Ai {
 
     public MyGameState copyOfModel(MyGameState gameState){
         MyGameStateFactory factory = new MyGameStateFactory();
-        return factory.build(gameState.getSetup(), gameState.getMrX(),gameState.getDetectivesAsPlayer());
+        return factory.build(gameState.getSetup(), gameState.getMrX(),gameState.getDetectivesAsPlayer(),
+                gameState.getRemaining(), gameState.getMrXTravelLog());
     }
 
     public ImmutableList<List<Move>> combinationOfMoves(MyGameState board) {
@@ -414,59 +416,63 @@ public class MyAi implements Ai {
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
 
-        for (Player d : immutableDetectives) {
-            if (board.makeSingleMoves(board.getSetup(), board.getDetectivesAsPlayer(), d, d.location()).isEmpty()) {
-                detectives.remove(d);
-            }
-        }
-
-        // iterate through list of detectives to find the shortest distance for each detective
-        for (Player detective : detectives) {
-
-            int detectiveLocation = detective.location();
-
-            // using a list to store listOfUnevaluatedNodes
-            List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
-
-            // initialize, shortest distance of other nodes are all infinity
-            // references: sion's lecture & princeton java source file for Dijkstra algorithm
-            // warehouseOfDistance list : mapping each node with distance to currentNode
-            List<Double> warehouseOfDistance = new ArrayList<>();
-
-
-            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
-                warehouseOfDistance.add(Double.POSITIVE_INFINITY);
-            }
-
-            warehouseOfDistance.set(locationOfMrx, 0.0);
-
-            // starting calculation until we find the shortest distance
-            Integer currentNode = locationOfMrx;
-            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
-                // select a new currentNode with shortest distance(under current circumstance)
-                currentNode = nodeWithShortestDistance(warehouseOfDistance);
-
-                List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
-
-                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
-                for(Integer node: adjNodes) {
-                    // cuz all paths' weight equal to 1
-                    double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
-                    // check whether currentNode is the shortest one
-                    if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
-                        warehouseOfDistance.set(node, ValueOfExtendShortestPath);
-                    }
-                }
-                // never go through this node again
-                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
-                listOfUnevaluatedNodes.remove(currentNode);
-            }
-            // store each distances
-            distances.addAll(warehouseOfDistance);
-        }
-        System.out.print("i am out");
+//        for (Player d : immutableDetectives) {
+//            if (board.makeSingleMoves(board.getSetup(), board.getDetectivesAsPlayer(), d, d.location()).isEmpty()) {
+//                detectives.remove(d);
+//            }
+//        }
+//
+//        // iterate through list of detectives to find the shortest distance for each detective
+//        for (Player detective : detectives) {
+//
+//            int detectiveLocation = detective.location();
+//
+//            // using a list to store listOfUnevaluatedNodes
+//            List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
+//
+//            // initialize, shortest distance of other nodes are all infinity
+//            // references: sion's lecture & princeton java source file for Dijkstra algorithm
+//            // warehouseOfDistance list : mapping each node with distance to currentNode
+//            List<Double> warehouseOfDistance = new ArrayList<>();
+//
+//
+//            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
+//                warehouseOfDistance.add(Double.POSITIVE_INFINITY);
+//            }
+//
+//            warehouseOfDistance.set(locationOfMrx, 0.0);
+//
+//            // starting calculation until we find the shortest distance
+//            Integer currentNode = locationOfMrx;
+//            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
+//                // select a new currentNode with shortest distance(under current circumstance)
+//                currentNode = nodeWithShortestDistance(warehouseOfDistance);
+//
+//                List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
+//
+//                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
+//                for(Integer node: adjNodes) {
+//                    // cuz all paths' weight equal to 1
+//                    double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
+//                    // check whether currentNode is the shortest one
+//                    if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
+//                        warehouseOfDistance.set(node, ValueOfExtendShortestPath);
+//                    }
+//                }
+//                // never go through this node again
+//                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
+//                listOfUnevaluatedNodes.remove(currentNode);
+//            }
+//            // store each distances
+//            distances.addAll(warehouseOfDistance);
+//        }
         // TODO: modify score with hashmap
-        return baseScoreCalculator(distances, board);
+
+        int rangeMin = 0;
+        int rangeMax = 100000;
+        Random r = new Random();
+        double randomValue = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
+        return randomValue;
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
@@ -485,7 +491,6 @@ public class MyAi implements Ai {
             if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
             p--;
         }
-        System.out.print("i am out2");
         if(revealedEntry.ticket().equals(Ticket.SECRET))
             base += 800;
         return base;
