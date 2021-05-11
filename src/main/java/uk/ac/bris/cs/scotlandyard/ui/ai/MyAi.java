@@ -45,8 +45,6 @@ public class MyAi implements Ai {
 
         int depth = 4;
         double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
-        System.out.print(score);
-        System.out.print("");
 
         // TODO: how to coordinate board during recursion & from score to move
 // 		List<Move> moves = board.getAvailableMoves().asList();
@@ -58,7 +56,12 @@ public class MyAi implements Ai {
 
         // currentBoard is actually a model object
         //Board currentBoard = model.getCurrentBoard();
-
+        List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
+        if (moves.isEmpty()) {
+            double score = winnerScore(model);
+            currentNode.setScore(score);
+            return score;
+        }
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
 
@@ -73,9 +76,9 @@ public class MyAi implements Ai {
         // currently haven't been reach lowest level of tree
         if (isMax) {
 
-            List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
+            //List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
 
-            if (!moves.isEmpty()) {
+            //if (!moves.isEmpty()) {
 
                 // if it's mrX' turn, set maximum sore to node & update alpha.
                 double scoreOfMax = Double.NEGATIVE_INFINITY;
@@ -95,7 +98,7 @@ public class MyAi implements Ai {
                     child.setMove(move);
                     currentNode.addChild(child);
                     // calculate & set the scores for each child node.
-                    double scoreOfChild = minimax(child, nextModel, depth + 1, false, alpha, beta);
+                    double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
 
                     // TODO: check whether it is right to do
                     // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
@@ -107,21 +110,20 @@ public class MyAi implements Ai {
 
                     // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                     // do not have intersection any more, no need to continue recursion
-                    if (beta <= alpha) {
-                        break;
-                    }
+//                    if (beta <= alpha) {
+//                        break;
+//                    }
                 }
                 return scoreOfMax;
-            }
+            //}
             // cannot make any move
-            else {
-                double score = winnerScore(model);
-                currentNode.setScore(score);
-                return score;
-            }
+//            else {
+//                double score = winnerScore(model);
+//                currentNode.setScore(score);
+//                return score;
+//            }
         }
         else {
-            if (!model.getWinner().isEmpty()) return winnerScore(model);
             // if it's detective' turn, set minimum sore to node & update beta.
             double minScore = Double.POSITIVE_INFINITY;
 
@@ -131,6 +133,9 @@ public class MyAi implements Ai {
             for (List<Move> combination : combinations) {
                 MyGameState nextModel = copyOfModel(model);
                 for (Move move : combination) {
+                    if(!nextModel.getAvailableMoves().contains(move)){
+                        continue;
+                    }
                     nextModel = copyOfModel(model);
                     nextModel = nextModel.advance(move);
                 }
@@ -145,9 +150,9 @@ public class MyAi implements Ai {
                 // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                 // do not have intersection any more, no need to continue recursion
                 beta = Math.min(beta, childScore);
-                if (beta <= alpha) {
-                    break;
-                }
+//                if (beta <= alpha) {
+//                    break;
+//                }
             }
             return minScore;
         }
@@ -315,15 +320,16 @@ public class MyAi implements Ai {
 
         List<List<Move>> allCombinations =  Lists.cartesianProduct(groupedMovesAsList);
         List<ImmutableList<Move>> immutableAllCombination = new ArrayList<>();
+
         //change all sub-lists into immutable list
         for (List<Move> moves:allCombinations){
             immutableAllCombination.add(ImmutableList.copyOf(moves));
         }
 
-        allCombinations = validateMove(immutableAllCombination, board, board.getPlayersAsPlayer());
+        //allCombinations = validateMove(immutableAllCombination, board, board.getPlayersAsPlayer());
 
         //TODO: combination algor
-        return ImmutableList.copyOf(allCombinations);
+        return ImmutableList.copyOf(immutableAllCombination);
     }
 
     public HashMap<Piece, List<Move>> groupedMoves(MyGameState board, ImmutableList<Player> detectives){
