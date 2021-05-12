@@ -398,7 +398,7 @@ public class MyAi implements Ai {
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
     private double scoring(MyGameState board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
         List<Double> distances = new ArrayList<>();
-        double tempDistance = 0;
+//        double tempDistance = 0;
 
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
@@ -419,7 +419,6 @@ public class MyAi implements Ai {
             // references: sion's lecture & princeton java source file for Dijkstra algorithm
             // warehouseOfDistance list : mapping each node with distance to currentNode
             List<Double> warehouseOfDistance = new ArrayList<>();
-
 
             for(int i = 0; i <= listOfUnevaluatedNodes.size(); i++){
                 warehouseOfDistance.add(Double.POSITIVE_INFINITY);
@@ -456,8 +455,8 @@ public class MyAi implements Ai {
             }
             // store each distances
             // TODO: debug, separate distances for each detective
-            distances.addAll(warehouseOfDistance);
-            tempDistance += warehouseOfDistance.get(detectiveLocation);
+            distances.add(warehouseOfDistance.get(currentNode));
+//            tempDistance += warehouseOfDistance.get(detectiveLocation);
         }
           return baseScoreCalculator(distances, board);
     }
