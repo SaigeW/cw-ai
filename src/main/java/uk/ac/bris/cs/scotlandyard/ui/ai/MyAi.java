@@ -32,54 +32,40 @@ public class MyAi implements Ai {
         // create list of players update with current status
         ImmutableList<Player> allPlayers = getPlayerList(board);
 
-
         MyGameState copiedModel = copyOfModel(board, allPlayers);
 
         Tree tree = new Tree(copiedModel);
 
         int depth = 2;
-        Storage x = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+        double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
-        // TODO: how to coordinate board during recursion & from score to move
-// 		List<Move> moves = board.getAvailableMoves().asList();
-// 		return moves.get(new Random().nextInt(moves.size()));
-        //return getBestMove(tree, score);
-        return x.getMove();
+        return getBestMove(tree, score);
     }
 
-    private Storage minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
+    private double minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
 
         // currentBoard is actually a model object
-        //Board currentBoard = model.getCurrentBoard();
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
         if (moves.isEmpty()) {
             double score = winnerScore(model);
             currentNode.setScore(score);
-            return new Storage(score, null);
+            return score;
         }
-        Move bestMove = moves.get(0);
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
-
             ImmutableList<Player> players = model.getDetectivesAsPlayer();
             double score = scoring(model, model.getMrX().location(), getDetectives(players));
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
-
-            return new Storage(score, null);
+            return score;
         }
         // currently haven't been reach lowest level of tree
         if (isMax) {
-
-            //List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
-
-            //if (!moves.isEmpty()) {
 
             // if it's mrX' turn, set maximum sore to node & update alpha.
             double scoreOfMax = Double.NEGATIVE_INFINITY;
 
             //elimination
             moves = elimination(moves);
-//                moves = eliminationForDoubleMove(moves);
 
             // continuing going left at first
             MyGameState nextModel;
@@ -92,16 +78,12 @@ public class MyAi implements Ai {
                 child.setMove(move);
                 currentNode.addChild(child);
                 // calculate & set the scores for each child node.
-                Storage x = minimax(child, nextModel, depth - 1, false, alpha, beta);
-                double scoreOfChild = x.score;
+                double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
 
                 // TODO: check whether it is right to do
                 // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
-                //scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
-                if(scoreOfChild > scoreOfMax){
-                    scoreOfMax = scoreOfChild;
-                    bestMove = move;
-                }
+                scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
+
                 currentNode.setScore(scoreOfMax);
 
                 // update alpha, cuz it's mrX' turn
@@ -109,20 +91,16 @@ public class MyAi implements Ai {
 
                 // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                 // do not have intersection any more, no need to continue recursion
-                    if (beta <= alpha) {
-                        break;
-                    }
+                if (beta <= alpha) {
+                    break;
+                }
             }
-            if(depth == 2){
-                return new Storage(scoreOfMax, bestMove);
-            }
-            return new Storage(scoreOfMax, null);
+            return scoreOfMax;
         }
         else {
             // if it's detective' turn, set minimum sore to node & update beta.
-            double minScore = Double.POSITIVE_INFINITY;
+            double scoreOfMin = Double.POSITIVE_INFINITY;
 
-            // TODO: how to generate moves with bunch of detectives?
             ImmutableList<List<Move>> combinations = combinationOfMoves(model);
 
             MyGameState nextModel;
@@ -142,10 +120,10 @@ public class MyAi implements Ai {
                 Vertex child = new Vertex(nextModel);
                 currentNode.addChild(child);
 
-                Storage x = minimax(child, nextModel, depth - 1, true, alpha, beta);
-                double childScore = x.score;
-                minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
-                currentNode.setScore(minScore);
+                double childScore = minimax(child, nextModel, depth - 1, true, alpha, beta);
+
+                scoreOfMin = Math.min(scoreOfMin, childScore); //Maintain the minimum score of the child nodes.
+                currentNode.setScore(scoreOfMin);
 
                 // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                 // do not have intersection any more, no need to continue recursion
@@ -154,35 +132,14 @@ public class MyAi implements Ai {
                     break;
                 }
             }
-            return new Storage(minScore, null);
+            return scoreOfMin;
         }
-    }
-
-    private class Storage{
-        private final Double score;
-        private final Move move;
-
-        public  Storage(Double score, Move move){
-            this.score = score;
-            this.move = move;
-        }
-
-        public Move getMove(){
-            return move;
-        }
-
-        public Double getScore(){
-            return score;
-        }
-
     }
 
 
     // store Tree from the starting point
     private class Tree {
-
         private final Vertex startNode;
-
         public Tree(MyGameState currentBoard) {
             this.startNode = new Vertex(currentBoard);
         }
@@ -252,7 +209,6 @@ public class MyAi implements Ai {
             theTicketMap.put(Ticket.TAXI, board.getPlayerTickets(p).get().getCount(Ticket.TAXI));
 
             // get player location
-            // TODO: if whether getAvailableMoves is empty?
             int locationOfPlayer = 0;
             if(p.isMrX()){locationOfPlayer = board.getAvailableMoves().iterator().next().source();}
             else {
@@ -276,8 +232,6 @@ public class MyAi implements Ai {
                         locationOfPlayer = board.getDetectiveLocation(Piece.Detective.YELLOW).get();
                 }
             }
-
-
             Player temp = new Player(p, ImmutableMap.copyOf(theTicketMap), locationOfPlayer);
             allPlayers.add(temp);
         }
@@ -315,7 +269,6 @@ public class MyAi implements Ai {
     }
 
     // build a copy of current board
-    // TODO: debug
     public MyGameState copyOfModel(Board board, ImmutableList<Player> players) {
         Player mrX = getMrX(players);
         ImmutableList<Player> detectives = getDetectives(players);
@@ -337,7 +290,7 @@ public class MyAi implements Ai {
         List<List<Move>> groupedMovesAsList = new ArrayList<>();
         for (Player d : detectives) {
             if(!groupedMoves.get(d.piece()).isEmpty()){
-            groupedMovesAsList.add(groupedMoves.get(d.piece())); }
+                groupedMovesAsList.add(groupedMoves.get(d.piece())); }
         }
 
         List<List<Move>> allCombinations =  Lists.cartesianProduct(groupedMovesAsList);
@@ -347,10 +300,6 @@ public class MyAi implements Ai {
         for (List<Move> moves:allCombinations){
             immutableAllCombination.add(ImmutableList.copyOf(moves));
         }
-
-        //allCombinations = validateMove(immutableAllCombination, board, board.getPlayersAsPlayer());
-
-        //TODO: combination algor
         return ImmutableList.copyOf(immutableAllCombination);
     }
 
@@ -362,7 +311,6 @@ public class MyAi implements Ai {
             groupedMoves.put(d.piece(), new ArrayList<Move>());
         }
         for (Move move : allMoves) groupedMoves.get(move.commencedBy()).add(move);
-
         return groupedMoves;
     }
 
@@ -389,16 +337,13 @@ public class MyAi implements Ai {
             if (!destinations.contains(getDestination(move))) finalMoves.add(move);
         }
         finalMoves.addAll(otherMoves);
-
         return ImmutableList.copyOf(finalMoves);
     }
 
 
-    // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
     private double scoring(MyGameState board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
         List<Double> distances = new ArrayList<>();
-//        double tempDistance = 0;
 
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
@@ -424,8 +369,6 @@ public class MyAi implements Ai {
                 warehouseOfDistance.add(Double.POSITIVE_INFINITY);
             }
 
-            //System.out.println(warehouseOfDistance.size());
-
             warehouseOfDistance.set(locationOfMrx, 0.0);
 
             // starting calculation until we find the shortest distance
@@ -436,7 +379,6 @@ public class MyAi implements Ai {
                 // select a new currentNode with shortest distance(under current circumstance)
                 currentNode = nodeWithShortestDistance(warehouseOfDistance);
 
-                // TODO: if there is no adjNodes ?
                 List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
 
                 for(Integer node: adjNodes) {
@@ -444,7 +386,6 @@ public class MyAi implements Ai {
                     double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
 
                     // check whether currentNode is the shortest one
-                    //System.out.printf("node number  %d%n", node);
                     if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
                         warehouseOfDistance.set(node, ValueOfExtendShortestPath);
                     }
@@ -454,11 +395,9 @@ public class MyAi implements Ai {
                 listOfUnevaluatedNodes.remove(currentNode);
             }
             // store each distances
-            // TODO: debug, separate distances for each detective
             distances.add(warehouseOfDistance.get(currentNode));
-//            tempDistance += warehouseOfDistance.get(detectiveLocation);
         }
-          return baseScoreCalculator(distances, board);
+        return baseScoreCalculator(distances, board);
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
@@ -482,10 +421,8 @@ public class MyAi implements Ai {
             if(revealedEntry.ticket().equals(Ticket.SECRET))
                 base += 800;}
 
-        //save double move
+        // save double move
         base += board.getMrX().tickets().get(Ticket.DOUBLE)*10000;
-
-
         return base;
     }
 
@@ -504,7 +441,6 @@ public class MyAi implements Ai {
     }
 
 
-    // TODO: maybe do some optimization ?
     // find the index of node which got shortest distance as the next node
     private Integer nodeWithShortestDistance(List<Double> warehouseOfDistance) {
         int indexOfShortestNode = 0;
