@@ -2,25 +2,22 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket;
+import uk.ac.bris.cs.scotlandyard.ui.ai.MyGameStateFactory.MyGameState;
 
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import uk.ac.bris.cs.scotlandyard.ui.ai.MyGameStateFactory;
-import uk.ac.bris.cs.scotlandyard.ui.ai.MyGameStateFactory.MyGameState;
 
 public class MyAi implements Ai {
 
     @Nonnull
     @Override
     public String name() {
-        return "Ikea Shasha";
+        return "Hermit Purple";
     }
 
 
@@ -42,7 +39,7 @@ public class MyAi implements Ai {
         return getBestMove(tree, score);
     }
 
-    private double minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
+    private double minimax(Vertex currentNode, MyGameState model, int depth, boolean isMax, double alpha, double beta) {
 
         // currentBoard is actually a model object
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
@@ -60,17 +57,13 @@ public class MyAi implements Ai {
         }
         // currently haven't been reach lowest level of tree
         if (isMax) {
-
             // if it's mrX' turn, set maximum sore to node & update alpha.
             double scoreOfMax = Double.NEGATIVE_INFINITY;
-
             //elimination
             moves = elimination(moves);
-
             // continuing going left at first
             MyGameState nextModel;
             for (Move move : moves) {
-                // TODO: how to advance ?
                 nextModel = copyOfModel(model);
                 nextModel = nextModel.advance(move);
                 // update child node
@@ -80,7 +73,6 @@ public class MyAi implements Ai {
                 // calculate & set the scores for each child node.
                 double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
 
-                // TODO: check whether it is right to do
                 // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
                 scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
 
@@ -96,8 +88,7 @@ public class MyAi implements Ai {
                 }
             }
             return scoreOfMax;
-        }
-        else {
+        } else {
             // if it's detective' turn, set minimum sore to node & update beta.
             double scoreOfMin = Double.POSITIVE_INFINITY;
 
@@ -109,10 +100,13 @@ public class MyAi implements Ai {
                 nextModel = copyOfModel(model);
                 invalidMove = false;
                 for (Move move : combination) {
-                    if (nextModel.getAvailableMoves().isEmpty()){break;}
-                    if (!nextModel.getAvailableMoves().contains(move)){
+                    if (nextModel.getAvailableMoves().isEmpty()) {
+                        break;
+                    }
+                    if (!nextModel.getAvailableMoves().contains(move)) {
                         invalidMove = true;
-                        break; }
+                        break;
+                    }
                     nextModel = nextModel.advance(move);
                 }
                 if (invalidMove) continue;
@@ -140,6 +134,7 @@ public class MyAi implements Ai {
     // store Tree from the starting point
     private class Tree {
         private final Vertex startNode;
+
         public Tree(MyGameState currentBoard) {
             this.startNode = new Vertex(currentBoard);
         }
@@ -178,7 +173,6 @@ public class MyAi implements Ai {
     }
 
 
-
     // using visitor pattern to get destination of each availableMoves
     private Integer getDestination(Move move) {
         return move.visit(new Move.Visitor<>() {
@@ -210,8 +204,9 @@ public class MyAi implements Ai {
 
             // get player location
             int locationOfPlayer = 0;
-            if(p.isMrX()){locationOfPlayer = board.getAvailableMoves().iterator().next().source();}
-            else {
+            if (p.isMrX()) {
+                locationOfPlayer = board.getAvailableMoves().iterator().next().source();
+            } else {
                 theTicketMap.remove(Ticket.DOUBLE);
                 theTicketMap.remove(Ticket.SECRET);
                 String color = p.webColour();
@@ -277,9 +272,9 @@ public class MyAi implements Ai {
         return factory.build(board.getSetup(), mrX, detectives, log);
     }
 
-    public MyGameState copyOfModel(MyGameState gameState){
+    public MyGameState copyOfModel(MyGameState gameState) {
         MyGameStateFactory factory = new MyGameStateFactory();
-        return factory.build(gameState.getSetup(), gameState.getMrX(),gameState.getDetectivesAsPlayer(),
+        return factory.build(gameState.getSetup(), gameState.getMrX(), gameState.getDetectivesAsPlayer(),
                 gameState.getRemaining(), gameState.getMrXTravelLog());
     }
 
@@ -289,21 +284,22 @@ public class MyAi implements Ai {
 
         List<List<Move>> groupedMovesAsList = new ArrayList<>();
         for (Player d : detectives) {
-            if(!groupedMoves.get(d.piece()).isEmpty()){
-                groupedMovesAsList.add(groupedMoves.get(d.piece())); }
+            if (!groupedMoves.get(d.piece()).isEmpty()) {
+                groupedMovesAsList.add(groupedMoves.get(d.piece()));
+            }
         }
 
-        List<List<Move>> allCombinations =  Lists.cartesianProduct(groupedMovesAsList);
+        List<List<Move>> allCombinations = Lists.cartesianProduct(groupedMovesAsList);
         List<ImmutableList<Move>> immutableAllCombination = new ArrayList<>();
 
         //change all sub-lists into immutable list
-        for (List<Move> moves:allCombinations){
+        for (List<Move> moves : allCombinations) {
             immutableAllCombination.add(ImmutableList.copyOf(moves));
         }
         return ImmutableList.copyOf(immutableAllCombination);
     }
 
-    public HashMap<Piece, List<Move>> groupedMoves(MyGameState board){
+    public HashMap<Piece, List<Move>> groupedMoves(MyGameState board) {
         ImmutableList<Player> detectives = board.getDetectivesAsPlayer();
         Set<Move> allMoves = board.getAvailableMoves();
         HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
@@ -365,7 +361,7 @@ public class MyAi implements Ai {
             // warehouseOfDistance list : mapping each node with distance to currentNode
             List<Double> warehouseOfDistance = new ArrayList<>();
 
-            for(int i = 0; i <= listOfUnevaluatedNodes.size(); i++){
+            for (int i = 0; i <= listOfUnevaluatedNodes.size(); i++) {
                 warehouseOfDistance.add(Double.POSITIVE_INFINITY);
             }
 
@@ -381,7 +377,7 @@ public class MyAi implements Ai {
 
                 List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
 
-                for(Integer node: adjNodes) {
+                for (Integer node : adjNodes) {
                     // cuz all paths' weight equal to 1
                     double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
 
@@ -400,44 +396,48 @@ public class MyAi implements Ai {
         return baseScoreCalculator(distances, board);
     }
 
-    private double baseScoreCalculator(List<Double> distances, MyGameState board){
-        if (!board.getWinner().isEmpty()){
+    private double baseScoreCalculator(List<Double> distances, MyGameState board) {
+        if (!board.getWinner().isEmpty()) {
             return winnerScore(board);
         }
         double base = 10000000;
-        for(Double x : distances){
-            base -= quadraticF(1/x);
+        for (Double x : distances) {
+            base -= quadraticF(1 / x);
         }
 
         List<LogEntry> logs = board.getMrXTravelLog();
         List<Boolean> rounds = board.getSetup().rounds;
         LogEntry revealedEntry = null;
-        int p =logs.size()-1;
-        while(p!=0){
-            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
+        int p = logs.size() - 1;
+        while (p != 0) {
+            if (rounds.get(p)) {
+                revealedEntry = logs.get(p);
+                break;
+            }
             p--;
         }
-        if (revealedEntry != null){
-            if(revealedEntry.ticket().equals(Ticket.SECRET))
-                base += 800;}
+        if (revealedEntry != null) {
+            if (revealedEntry.ticket().equals(Ticket.SECRET))
+                base += 800;
+        }
 
         // save double move
-        base += board.getMrX().tickets().get(Ticket.DOUBLE)*10000;
+        base += board.getMrX().tickets().get(Ticket.DOUBLE) * 10000;
         return base;
     }
 
-    private Double winnerScore(MyGameState board){
-        if(board.getWinner().contains(Piece.MrX.MRX)){
+    private Double winnerScore(MyGameState board) {
+        if (board.getWinner().contains(Piece.MrX.MRX)) {
             System.out.println("mr X win");
             return Double.POSITIVE_INFINITY;
-        }
-        else {
+        } else {
             System.out.println("detectives win");
-            return Double.NEGATIVE_INFINITY;}
+            return Double.NEGATIVE_INFINITY;
+        }
     }
 
-    private Double quadraticF(Double x){
-        return 150000*x*x;
+    private Double quadraticF(Double x) {
+        return 150000 * x * x;
     }
 
 
