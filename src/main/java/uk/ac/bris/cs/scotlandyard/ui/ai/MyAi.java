@@ -78,41 +78,41 @@ public class MyAi implements Ai {
 
             //if (!moves.isEmpty()) {
 
-                // if it's mrX' turn, set maximum sore to node & update alpha.
-                double scoreOfMax = Double.NEGATIVE_INFINITY;
+            // if it's mrX' turn, set maximum sore to node & update alpha.
+            double scoreOfMax = Double.NEGATIVE_INFINITY;
 
-                //elimination
+            //elimination
 //                moves = elimination(moves);
 //                moves = eliminationForDoubleMove(moves);
 
-                // continuing going left at first
-                MyGameState nextModel;
-                for (Move move : moves) {
-                    // TODO: how to advance ?
-                    nextModel = copyOfModel(model);
-                    nextModel = nextModel.advance(move);
-                    // update child node
-                    Vertex child = new Vertex(nextModel);
-                    child.setMove(move);
-                    currentNode.addChild(child);
-                    // calculate & set the scores for each child node.
-                    double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
+            // continuing going left at first
+            MyGameState nextModel;
+            for (Move move : moves) {
+                // TODO: how to advance ?
+                nextModel = copyOfModel(model);
+                nextModel = nextModel.advance(move);
+                // update child node
+                Vertex child = new Vertex(nextModel);
+                child.setMove(move);
+                currentNode.addChild(child);
+                // calculate & set the scores for each child node.
+                double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
 
-                    // TODO: check whether it is right to do
-                    // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
-                    scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
-                    currentNode.setScore(scoreOfMax);
+                // TODO: check whether it is right to do
+                // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
+                scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
+                currentNode.setScore(scoreOfMax);
 
-                    // update alpha, cuz it's mrX' turn
-                    alpha = Math.max(alpha, scoreOfChild);
+                // update alpha, cuz it's mrX' turn
+                alpha = Math.max(alpha, scoreOfChild);
 
-                    // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
-                    // do not have intersection any more, no need to continue recursion
+                // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
+                // do not have intersection any more, no need to continue recursion
 //                    if (beta <= alpha) {
 //                        break;
 //                    }
-                }
-                return scoreOfMax;
+            }
+            return scoreOfMax;
             //}
             // cannot make any move
 //            else {
@@ -398,6 +398,7 @@ public class MyAi implements Ai {
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
     private double scoring(MyGameState board, int locationOfMrx, ImmutableList<Player> immutableDetectives) {
         List<Double> distances = new ArrayList<>();
+        double tempDistance = 0;
 
         // check whether a detective cannot move.
         List<Player> detectives = new ArrayList<>(immutableDetectives);
@@ -410,9 +411,7 @@ public class MyAi implements Ai {
 
         // iterate through list of detectives to find the shortest distance for each detective
         for (Player detective : detectives) {
-
             int detectiveLocation = detective.location();
-
             // using a list to store listOfUnevaluatedNodes
             List<Integer> listOfUnevaluatedNodes = new ArrayList<>(board.getSetup().graph.nodes());
 
@@ -422,49 +421,51 @@ public class MyAi implements Ai {
             List<Double> warehouseOfDistance = new ArrayList<>();
 
 
-            for(int i=0; i<listOfUnevaluatedNodes.size(); i++){
+            for(int i = 0; i <= listOfUnevaluatedNodes.size(); i++){
                 warehouseOfDistance.add(Double.POSITIVE_INFINITY);
             }
+
+            System.out.println(warehouseOfDistance.size());
 
             warehouseOfDistance.set(locationOfMrx, 0.0);
 
             // starting calculation until we find the shortest distance
             Integer currentNode = locationOfMrx;
-            while (currentNode != detectiveLocation && !listOfUnevaluatedNodes.isEmpty()) {
+
+            // iterating through all nodes while there are nodes that unevaluated
+            while (currentNode != detectiveLocation && (!listOfUnevaluatedNodes.isEmpty())) {
                 // select a new currentNode with shortest distance(under current circumstance)
                 currentNode = nodeWithShortestDistance(warehouseOfDistance);
 
+                // TODO: if there is no adjNodes ?
                 List<Integer> adjNodes = new ArrayList<>(board.getSetup().graph.adjacentNodes(currentNode));
 
-                // TODO: check if setting all distance from current node to adjacentNodes with same value(int 1) is right ?
                 for(Integer node: adjNodes) {
                     // cuz all paths' weight equal to 1
                     double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
+
                     // check whether currentNode is the shortest one
+                    System.out.printf("node number  %d%n", node);
                     if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
                         warehouseOfDistance.set(node, ValueOfExtendShortestPath);
                     }
                 }
                 // never go through this node again
-                warehouseOfDistance.set(currentNode, Double.NEGATIVE_INFINITY);
+                warehouseOfDistance.set(currentNode, Double.POSITIVE_INFINITY);
                 listOfUnevaluatedNodes.remove(currentNode);
             }
             // store each distances
-            distances.addAll(warehouseOfDistance);
+            // TODO: debug, separate distances for each detective
+//            distances.addAll(warehouseOfDistance);
+            tempDistance += warehouseOfDistance.get(detectiveLocation);
         }
-//         TODO: modify score with hashmap
-
-//        int rangeMin = 0;
-//        int rangeMax = 100000;
-//        Random r = new Random();
-//        double randomValue = rangeMin + (rangeMax - rangeMin) * r.nextDouble();
-//        return randomValue;
-        return baseScoreCalculator(distances, board);
+//        return baseScoreCalculator(distances, board);
+        return tempDistance;
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
         if (!board.getWinner().isEmpty()){
-           return winnerScore(board);
+            return winnerScore(board);
         }
         double base = 10000;
         for(Double x : distances){
@@ -486,7 +487,7 @@ public class MyAi implements Ai {
     private Double winnerScore(MyGameState board){
         if(board.getWinner().contains(Piece.MrX.MRX)){
             return Double.POSITIVE_INFINITY;
-            }
+        }
         else return Double.NEGATIVE_INFINITY;
     }
 
@@ -496,7 +497,7 @@ public class MyAi implements Ai {
 
 
     // TODO: maybe do some optimization ?
-    // find a node which got shortest distance
+    // find the index of node which got shortest distance as the next node
     private Integer nodeWithShortestDistance(List<Double> warehouseOfDistance) {
         int indexOfShortestNode = 0;
         for (int i = 0; i < warehouseOfDistance.size(); i++) {
