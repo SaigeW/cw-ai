@@ -44,7 +44,7 @@ public class MyAi implements Ai {
 // 		List<Move> moves = board.getAvailableMoves().asList();
 // 		return moves.get(new Random().nextInt(moves.size()));
         //return getBestMove(tree, score);
-        return x.move;
+        return x.getMove();
     }
 
     private Storage minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
@@ -158,14 +158,23 @@ public class MyAi implements Ai {
         }
     }
 
-    public class Storage{
-        public Double score;
-        public Move move;
+    private class Storage{
+        private final Double score;
+        private final Move move;
 
-        public Storage(Double score, Move move){
+        public  Storage(Double score, Move move){
             this.score = score;
             this.move = move;
         }
+
+        public Move getMove(){
+            return move;
+        }
+
+        public Double getScore(){
+            return score;
+        }
+
     }
 
 
@@ -475,7 +484,7 @@ public class MyAi implements Ai {
                 base += 800;}
 
         //save double move
-        base += board.getMrX().tickets().get(Ticket.DOUBLE)*1000;
+        base += board.getMrX().tickets().get(Ticket.DOUBLE)*10000;
 
 
         return base;
@@ -492,7 +501,7 @@ public class MyAi implements Ai {
     }
 
     private Double quadraticF(Double x){
-        return 15000*x*x;
+        return 150000*x*x;
     }
 
 
