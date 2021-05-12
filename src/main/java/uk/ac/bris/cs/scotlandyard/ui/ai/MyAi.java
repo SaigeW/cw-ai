@@ -44,25 +44,26 @@ public class MyAi implements Ai {
         Tree tree = new Tree(copiedModel);
 
         int depth = 2;
-        double score = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+        Storage x = minimax(tree.startNode, copiedModel, depth, true, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         // TODO: how to coordinate board during recursion & from score to move
 // 		List<Move> moves = board.getAvailableMoves().asList();
 // 		return moves.get(new Random().nextInt(moves.size()));
-        return getBestMove(tree, score);
+        //return getBestMove(tree, score);
+        return x.move;
     }
 
-    private double minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
+    private Storage minimax(Vertex currentNode, MyGameState model,  int depth, boolean isMax, double alpha, double beta) {
 
         // currentBoard is actually a model object
         //Board currentBoard = model.getCurrentBoard();
-        Move bestMove;
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
         if (moves.isEmpty()) {
             double score = winnerScore(model);
             currentNode.setScore(score);
-            return score;
+            return new Storage(score, null);
         }
+        Move bestMove = moves.get(0);
         //If the leaves of the tree have been reached (the lowest layer which will be evaluated), calculate the score for the currentBoard.
         if (depth == 0) {
 
@@ -70,7 +71,7 @@ public class MyAi implements Ai {
             double score = scoring(model, model.getMrX().location(), getDetectives(players));
             currentNode.setScore(score); //Set the score stored in the node. This is required to find the best move.
 
-            return score;
+            return new Storage(score, null);
         }
         // currently haven't been reach lowest level of tree
         if (isMax) {
@@ -97,15 +98,16 @@ public class MyAi implements Ai {
                 child.setMove(move);
                 currentNode.addChild(child);
                 // calculate & set the scores for each child node.
-                double scoreOfChild = minimax(child, nextModel, depth - 1, false, alpha, beta);
+                Storage x = minimax(child, nextModel, depth - 1, false, alpha, beta);
+                double scoreOfChild = x.score;
 
                 // TODO: check whether it is right to do
                 // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
-                scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
-//                if(scoreOfChild > scoreOfMax){
-//                    scoreOfMax = scoreOfChild;
-//                    bestMove = move;
-//                }
+                //scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
+                if(scoreOfChild > scoreOfMax){
+                    scoreOfMax = scoreOfChild;
+                    bestMove = move;
+                }
                 currentNode.setScore(scoreOfMax);
 
                 // update alpha, cuz it's mrX' turn
@@ -117,10 +119,10 @@ public class MyAi implements Ai {
                         break;
                     }
             }
-//            if(depth == 2){
-//                return (bestMove, score);
-//            }
-            return scoreOfMax;
+            if(depth == 2){
+                return new Storage(scoreOfMax, bestMove);
+            }
+            return new Storage(scoreOfMax, null);
         }
         else {
             // if it's detective' turn, set minimum sore to node & update beta.
@@ -146,7 +148,8 @@ public class MyAi implements Ai {
                 Vertex child = new Vertex(nextModel);
                 currentNode.addChild(child);
 
-                double childScore = minimax(child, nextModel, depth - 1, true, alpha, beta);
+                Storage x = minimax(child, nextModel, depth - 1, true, alpha, beta);
+                double childScore = x.score;
                 minScore = Math.min(minScore, childScore); //Maintain the minimum score of the child nodes.
                 currentNode.setScore(minScore);
 
@@ -157,7 +160,17 @@ public class MyAi implements Ai {
                     break;
                 }
             }
-            return minScore;
+            return new Storage(minScore, null);
+        }
+    }
+
+    public class Storage{
+        public Double score;
+        public Move move;
+
+        public Storage(Double score, Move move){
+            this.score = score;
+            this.move = move;
         }
     }
 
@@ -349,30 +362,30 @@ public class MyAi implements Ai {
 
 
     // eliminate unnecessary and expensive move
-//    public ImmutableList<Move> elimination(List<Move> moves) {
-//        ArrayList<Move> finalMoves = new ArrayList<>();
-//        ArrayList<Move> secretMoves = new ArrayList<>();
-//        //destinations of bus/underground moves
-//        ArrayList<Integer> destinations = new ArrayList<>();
-//        ArrayList<Move> otherMoves = new ArrayList<>();
-//        for (Move move : moves) {
-//
-//            //only if it is secret and it is not double move
-//            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
-//                    !move.tickets().iterator().hasNext()) secretMoves.add(move);
-//            else {
-//                otherMoves.add(move);
-//                destinations.add(getDestination(move));
-//            }
-//        }
-//
-//        for (Move move : secretMoves) {
-//            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
-//        }
-//        finalMoves.addAll(otherMoves);
-//
-//        return ImmutableList.copyOf(finalMoves);
-//    }
+    public ImmutableList<Move> elimination(List<Move> moves) {
+        ArrayList<Move> finalMoves = new ArrayList<>();
+        ArrayList<Move> secretMoves = new ArrayList<>();
+        //destinations of bus/underground moves
+        ArrayList<Integer> destinations = new ArrayList<>();
+        ArrayList<Move> otherMoves = new ArrayList<>();
+
+        for (Move move : moves) {
+            //only if it is secret and it is not double move
+            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
+                    !move.tickets().iterator().hasNext()) secretMoves.add(move);
+            else {
+                otherMoves.add(move);
+                destinations.add(getDestination(move));
+            }
+        }
+
+        for (Move move : secretMoves) {
+            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
+        }
+        finalMoves.addAll(otherMoves);
+
+        return ImmutableList.copyOf(finalMoves);
+    }
 
 
     // TODO: how to calculate score ?
@@ -441,7 +454,6 @@ public class MyAi implements Ai {
             tempDistance += warehouseOfDistance.get(detectiveLocation);
         }
           return baseScoreCalculator(distances, board);
-//        return tempDistance;
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
@@ -491,11 +503,5 @@ public class MyAi implements Ai {
             }
         }
         return indexOfShortestNode;
-    }
-
-    private void ifNodeValid(List<Double> warehouseOfDistance, int v) {
-        int sizeOfDistances = warehouseOfDistance.size();
-        if (v < 0 || v >= sizeOfDistances)
-            throw new IllegalArgumentException("error");
     }
 }
