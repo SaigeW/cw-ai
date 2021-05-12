@@ -31,13 +31,7 @@ public class MyAi implements Ai {
             Pair<Long, TimeUnit> timeoutPair) {
         // create list of players update with current status
         ImmutableList<Player> allPlayers = getPlayerList(board);
-//        Player mrX = getMrX(allPlayers);
-//        ImmutableList<Player> detectives = getDetectives(allPlayers);
-        //System.out.format(String.valueOf(detectives));
-        //System.out.format(String.valueOf(mrX));
 
-//        System.out.println(mrX);
-//        System.out.println(detectives);
 
         MyGameState copiedModel = copyOfModel(board, allPlayers);
 
@@ -84,7 +78,7 @@ public class MyAi implements Ai {
             double scoreOfMax = Double.NEGATIVE_INFINITY;
 
             //elimination
-//                moves = elimination(moves);
+            moves = elimination(moves);
 //                moves = eliminationForDoubleMove(moves);
 
             // continuing going left at first
@@ -317,7 +311,8 @@ public class MyAi implements Ai {
         Player mrX = getMrX(players);
         ImmutableList<Player> detectives = getDetectives(players);
         MyGameStateFactory factory = new MyGameStateFactory();
-        return factory.build(board.getSetup(), mrX, detectives);
+        ImmutableList<LogEntry> log = board.getMrXTravelLog();
+        return factory.build(board.getSetup(), mrX, detectives, log);
     }
 
     public MyGameState copyOfModel(MyGameState gameState){
@@ -327,13 +322,13 @@ public class MyAi implements Ai {
     }
 
     public ImmutableList<List<Move>> combinationOfMoves(MyGameState board) {
-        Set<Move> allMoves = board.getAvailableMoves();
         ImmutableList<Player> detectives = board.getDetectivesAsPlayer();
-        HashMap<Piece, List<Move>> groupedMoves = groupedMoves(board, detectives);
+        HashMap<Piece, List<Move>> groupedMoves = groupedMoves(board);
 
         List<List<Move>> groupedMovesAsList = new ArrayList<>();
         for (Player d : detectives) {
-            groupedMovesAsList.add(groupedMoves.get(d.piece()));
+            if(!groupedMoves.get(d.piece()).isEmpty()){
+            groupedMovesAsList.add(groupedMoves.get(d.piece())); }
         }
 
         List<List<Move>> allCombinations =  Lists.cartesianProduct(groupedMovesAsList);
@@ -350,13 +345,15 @@ public class MyAi implements Ai {
         return ImmutableList.copyOf(immutableAllCombination);
     }
 
-    public HashMap<Piece, List<Move>> groupedMoves(MyGameState board, ImmutableList<Player> detectives){
+    public HashMap<Piece, List<Move>> groupedMoves(MyGameState board){
+        ImmutableList<Player> detectives = board.getDetectivesAsPlayer();
         Set<Move> allMoves = board.getAvailableMoves();
         HashMap<Piece, List<Move>> groupedMoves = new HashMap<Piece, List<Move>>();
         for (Player d : detectives) {
             groupedMoves.put(d.piece(), new ArrayList<Move>());
         }
         for (Move move : allMoves) groupedMoves.get(move.commencedBy()).add(move);
+
         return groupedMoves;
     }
 
@@ -365,7 +362,7 @@ public class MyAi implements Ai {
     public ImmutableList<Move> elimination(List<Move> moves) {
         ArrayList<Move> finalMoves = new ArrayList<>();
         ArrayList<Move> secretMoves = new ArrayList<>();
-        //destinations of bus/underground moves
+
         ArrayList<Integer> destinations = new ArrayList<>();
         ArrayList<Move> otherMoves = new ArrayList<>();
 
@@ -464,17 +461,23 @@ public class MyAi implements Ai {
         for(Double x : distances){
             base -= quadraticF(1/x);
         }
+
         List<LogEntry> logs = board.getMrXTravelLog();
         List<Boolean> rounds = board.getSetup().rounds;
-//        LogEntry revealedEntry = null;
-//        int p =logs.size()-1;
-//        while(p!=0){
-//            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
-//            p--;
-//        }
-//        if (revealedEntry != null){
-//        if(revealedEntry.ticket().equals(Ticket.SECRET))
-//            base += 800;}
+        LogEntry revealedEntry = null;
+        int p =logs.size()-1;
+        while(p!=0){
+            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
+            p--;
+        }
+        if (revealedEntry != null){
+            if(revealedEntry.ticket().equals(Ticket.SECRET))
+                base += 800;}
+
+        //save double move
+        base += board.getMrX().tickets().get(Ticket.DOUBLE)*1000;
+
+
         return base;
     }
 
@@ -489,7 +492,7 @@ public class MyAi implements Ai {
     }
 
     private Double quadraticF(Double x){
-        return 1500*x*x;
+        return 15000*x*x;
     }
 
 

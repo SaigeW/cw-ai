@@ -28,7 +28,7 @@ public class MyGameStateFactory{
     public MyGameState build(
             GameSetup setup,
             Player mrX,
-            ImmutableList<Player> detectives) {
+            ImmutableList<Player> detectives, ImmutableList<LogEntry> log) {
 
         // the piece of detectives in tempSet
         List<Player> tempList = new ArrayList<Player>();
@@ -36,7 +36,7 @@ public class MyGameStateFactory{
         tempList.addAll(detectives);
         ImmutableList<Player> players = ImmutableList.copyOf(tempList);
 
-        return new MyGameState(setup, players, ImmutableList.of(), mrX, detectives);
+        return new MyGameState(setup, players, log, mrX, detectives);
     }
 
     public MyGameState build(GameSetup setup, Player mrX, ImmutableList<Player> detectives,
