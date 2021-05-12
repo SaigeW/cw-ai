@@ -56,6 +56,7 @@ public class MyAi implements Ai {
 
         // currentBoard is actually a model object
         //Board currentBoard = model.getCurrentBoard();
+        Move bestMove;
         List<Move> moves = ImmutableList.copyOf(model.getAvailableMoves());
         if (moves.isEmpty()) {
             double score = winnerScore(model);
@@ -101,6 +102,10 @@ public class MyAi implements Ai {
                 // TODO: check whether it is right to do
                 // ATTENTION! starting execute rest of code inside bracket from the second lowest level of tree
                 scoreOfMax = Math.max(scoreOfMax, scoreOfChild);
+//                if(scoreOfChild > scoreOfMax){
+//                    scoreOfMax = scoreOfChild;
+//                    bestMove = move;
+//                }
                 currentNode.setScore(scoreOfMax);
 
                 // update alpha, cuz it's mrX' turn
@@ -108,18 +113,14 @@ public class MyAi implements Ai {
 
                 // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                 // do not have intersection any more, no need to continue recursion
-//                    if (beta <= alpha) {
-//                        break;
-//                    }
+                    if (beta <= alpha) {
+                        break;
+                    }
             }
-            return scoreOfMax;
-            //}
-            // cannot make any move
-//            else {
-//                double score = winnerScore(model);
-//                currentNode.setScore(score);
-//                return score;
+//            if(depth == 2){
+//                return (bestMove, score);
 //            }
+            return scoreOfMax;
         }
         else {
             // if it's detective' turn, set minimum sore to node & update beta.
@@ -152,9 +153,9 @@ public class MyAi implements Ai {
                 // Alpha Beta Pruning, if beta(minimum upper bound) and alpha(maximum lower bound)
                 // do not have intersection any more, no need to continue recursion
                 beta = Math.min(beta, childScore);
-//                if (beta <= alpha) {
-//                    break;
-//                }
+                if (beta <= alpha) {
+                    break;
+                }
             }
             return minScore;
         }
@@ -293,6 +294,7 @@ public class MyAi implements Ai {
                 return best.move;
             }
         }
+        System.out.println(score);
         return null;
     }
 
@@ -372,27 +374,6 @@ public class MyAi implements Ai {
 //        return ImmutableList.copyOf(finalMoves);
 //    }
 
-//    public ImmutableList<Move> eliminationForDoubleMove(List<Move> moves) {
-//        ArrayList<Move> finalMoves = new ArrayList<>();
-//        ArrayList<Move> doubleSecretMoves = new ArrayList<>();
-//        //destinations of bus/underground moves
-//        ArrayList<Integer> destinations = new ArrayList<>();
-//        ArrayList<Move> otherMoves = new ArrayList<>();
-//        for (Move move : moves) {
-//            if (move.tickets().iterator().next().equals(Ticket.SECRET) &&
-//                    move.tickets().iterator().next().equals(Ticket.SECRET)) {
-//                doubleSecretMoves.add(move);
-//            } else {
-//                otherMoves.add(move);
-//                destinations.add(getDestination(move));
-//            }
-//        }
-//        for (Move move : doubleSecretMoves) {
-//            if (!destinations.contains(getDestination(move))) finalMoves.add(move);
-//        }
-//        finalMoves.addAll(otherMoves);
-//        return ImmutableList.copyOf(finalMoves);
-//    }
 
     // TODO: how to calculate score ?
     // get score by using Dijkstra algorithm(shortest distance between mrX and detectives)
@@ -425,7 +406,7 @@ public class MyAi implements Ai {
                 warehouseOfDistance.add(Double.POSITIVE_INFINITY);
             }
 
-            System.out.println(warehouseOfDistance.size());
+            //System.out.println(warehouseOfDistance.size());
 
             warehouseOfDistance.set(locationOfMrx, 0.0);
 
@@ -445,7 +426,7 @@ public class MyAi implements Ai {
                     double ValueOfExtendShortestPath = warehouseOfDistance.get(currentNode) + 1;
 
                     // check whether currentNode is the shortest one
-                    System.out.printf("node number  %d%n", node);
+                    //System.out.printf("node number  %d%n", node);
                     if (ValueOfExtendShortestPath < warehouseOfDistance.get(node) && listOfUnevaluatedNodes.contains(node)) {
                         warehouseOfDistance.set(node, ValueOfExtendShortestPath);
                     }
@@ -456,39 +437,43 @@ public class MyAi implements Ai {
             }
             // store each distances
             // TODO: debug, separate distances for each detective
-//            distances.addAll(warehouseOfDistance);
+            distances.addAll(warehouseOfDistance);
             tempDistance += warehouseOfDistance.get(detectiveLocation);
         }
-//        return baseScoreCalculator(distances, board);
-        return tempDistance;
+          return baseScoreCalculator(distances, board);
+//        return tempDistance;
     }
 
     private double baseScoreCalculator(List<Double> distances, MyGameState board){
         if (!board.getWinner().isEmpty()){
             return winnerScore(board);
         }
-        double base = 10000;
+        double base = 10000000;
         for(Double x : distances){
             base -= quadraticF(1/x);
         }
         List<LogEntry> logs = board.getMrXTravelLog();
         List<Boolean> rounds = board.getSetup().rounds;
-        LogEntry revealedEntry = null;
-        int p =logs.size()-1;
-        while(p!=0){
-            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
-            p--;
-        }
-        if(revealedEntry.ticket().equals(Ticket.SECRET))
-            base += 800;
+//        LogEntry revealedEntry = null;
+//        int p =logs.size()-1;
+//        while(p!=0){
+//            if (rounds.get(p)) {revealedEntry = logs.get(p); break;}
+//            p--;
+//        }
+//        if (revealedEntry != null){
+//        if(revealedEntry.ticket().equals(Ticket.SECRET))
+//            base += 800;}
         return base;
     }
 
     private Double winnerScore(MyGameState board){
         if(board.getWinner().contains(Piece.MrX.MRX)){
+            System.out.println("mr X win");
             return Double.POSITIVE_INFINITY;
         }
-        else return Double.NEGATIVE_INFINITY;
+        else {
+            System.out.println("detectives win");
+            return Double.NEGATIVE_INFINITY;}
     }
 
     private Double quadraticF(Double x){

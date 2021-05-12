@@ -132,12 +132,10 @@ public class MyGameStateFactory{
 			 after update constructor, check if there is a winner (overlap or detective can not make any move)
 			*/
             if (checkWinnerIsDetective(mrX, detectives)) {
-                System.out.println("d win");
                 this.currentPlayer = null;
                 this.moves = ImmutableSet.copyOf(Set.of());
                 this.winner = ImmutableSet.copyOf(detectivesPiece);
             } else if (checkWinnerIsMrX(mrX, detectives, setup)) {
-                System.out.println("Mr X win");
                 this.currentPlayer = null;
                 this.moves = ImmutableSet.copyOf(Set.of());
                 this.winner = ImmutableSet.of(mrX.piece());
