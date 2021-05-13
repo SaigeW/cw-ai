@@ -14,15 +14,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <skipAfter>0</skipAfter>
         <werror>true</werror>
-        <javafx.version>16-ea+7</javafx.version>
+        <javafx.version>17-ea+8</javafx.version>
     </properties>
 
 
     <repositories>
-        <repository>
-            <id>jcenter</id>
-            <url>https://jcenter.bintray.com/</url>
-        </repository>
         <repository>
             <id>project.local</id>
             <name>project</name>
@@ -79,7 +75,7 @@
         <dependency>
             <groupId>net.kurobako</groupId>
             <artifactId>gesturefx</artifactId>
-            <version>0.6.0</version>
+            <version>0.7.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
