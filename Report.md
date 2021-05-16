@@ -1,7 +1,3 @@
-% Report
-% authors Siyan Ng; Yichen Zhao
-% date 2021 TB2
-
 #Report on Modelling of Scotland Yard
 
 ##CW-Model
@@ -28,21 +24,24 @@ Almost all of our biggest struggles in the development process come from our Imp
 
 Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn is slightly handy so we use the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijisktra Algorithm, which will be explained in detail later.
 
-<img src="/Users/mingyuenun/Downloads/IMG_1297.PNG" style="zoom:45%;" />
 
 #### Scoring Function
 
 The scoring function considers the distances from detectives to Mr.X. It also weighs each distance because the closer the detective is the more dangerous the game state will be. The function reviews the log entry too. The score will be higher if the detective sees a secret move when revealed. It also saves double moves for more emergency circumstances otherwise the AI is going to consume them at the very beginning of the game.
 
-The score is calculated by the following function
+The general score is calculated by the following function
 $$
 S=base-\sum_{i=0}^{n} \frac{\alpha}{d_{i}^2}
 $$
-where *base* is the base score and *alpha* is an argument. The value of *alpha* is on the basis of the base score.
+where *base* is the base score and *alpha* is an argument. The value of *alpha* is on the basis of the base score.  
 
 #### Minimax and Alpha-Beta Prunning
+<img src="IMG_1297.PNG" style="zoom:45%;" />
+
+Simulation in the minimax algorithm uses a lite version of MyGameState class we implemented in CW-Model. A new instance will be initialized for each move and passed into the deeper recursion until the recursive function reaches the base. A tree will be created in this process, and a higher node will select the biggest or smallest score from its children nodes. Scores are passed from the bottom way to the top layer of nodes. Therefore, the helper function can select the correct optimal move by comparing the score of the root node and that of its children.
 
 ### Limitation of AI
+
 The biggest limitation of our AI is its efficiency. We have cut the unneccesary simulation and  used Alpha-Beta Prunning. Even so the workload is still huge for a low performancy laptop. 
 
 The scoring function has another important issue. It cannot analysis the density of detectives in an area. If the four detectives are at equal distances from the suspect, but two are in the east and the rest in the other direction. The AI cannot tell that the two detectives on the east are more dangerous than the others.
