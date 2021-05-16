@@ -400,7 +400,7 @@ public class MyAi implements Ai {
         if (!board.getWinner().isEmpty()) {
             return winnerScore(board);
         }
-        double base = 10000000;
+        double base = 100000;
         for (Double x : distances) {
             base -= quadraticF(1 / x);
         }
@@ -418,11 +418,11 @@ public class MyAi implements Ai {
         }
         if (revealedEntry != null) {
             if (revealedEntry.ticket().equals(Ticket.SECRET))
-                base += 800;
+                base += 80000;
         }
 
         // save double move
-        base += board.getMrX().tickets().get(Ticket.DOUBLE) * 10000;
+        base += board.getMrX().tickets().get(Ticket.DOUBLE) * 50000;
         return base;
     }
 
