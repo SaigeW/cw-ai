@@ -12,7 +12,30 @@ The single moves are produced by a given player and a given ticket map. To gener
 
 All single moves are needed to produce double moves.  An intermediate destination must be one of the destinations of available single moves. Hence the function iterates through the available single moves, finds adjacent nodes of the intermediate destination, and produces a new ticket board. Next, it iterates through the adjacent nodes, passing it and the new ticket board to the CheckSingleMove function to check its feasibility. A helper function will ingrate two single moves together to produce a double move.
 
-#### Lamda Functions
+#### How to get TicketBoard in an elegant way : Lambda
+
+The implementation of function:
+```java
+getPlayerTickets(Piece piece)
+```
+require to return an instance of TicketBoard of type Optional by given piece.
+
+Generally, this function can be accomplished by implementing an anonymous class of TicketBoard.
+Such as:
+```java
+new TicketBoard() {
+    @Override
+    public int getCount(@Nonnull Ticket ticket) {
+        return player.tickets().get(ticket);
+    }
+}
+```
+However, powerful JAVA alow us to arm ourselves with style of functional programming by passing a function as a parameter, which simpler and more efficient. After find the player object by given piece, we can use 
+```java
+ticket -> player.tickets().get(ticket);
+```
+to implementing the TicketBoard instead of anonymous class.
+Finally, return it back with wrapping of Optional.
 
 ### Reflection
 
