@@ -79,4 +79,4 @@ We can fix bugs such as these much more quickly and easily if we run unit tests.
 
 The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. 
 We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
-The tree structure can be set to any depth. This means that if the performance is optimized enough, Mr. X will become invincible with a deep enough minimization algorithm
+The tree structure can be set to any depth. This means that if the performance is optimized enough, Mr. X will become invincible with a deep enough minimization algorithm.
