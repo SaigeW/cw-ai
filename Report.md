@@ -1,4 +1,4 @@
-#Report on Modelling of Scotland Yard
+#Report
 
 ##CW-Model
 
@@ -22,6 +22,7 @@ require to return an instance of TicketBoard of type Optional by given piece.
 
 Generally, this function can be accomplished by implementing an anonymous class of TicketBoard.
 Such as:
+
 ```java
 new TicketBoard() {
     @Override
@@ -71,21 +72,16 @@ The scoring function has another important issue. It cannot analysis the density
 
 ### Reflection
 
-- Difficulty we have encountered
-  - Originally, we choose to debug after all the functional modules of ai are assembled.However, we found it difficult to determine which module the problem occurred in, resulting in less efficient development overall.
-
-- Solution
-  - We realized that it should be better to debug the different functional modules of the program first, and then assemble them after they can complete the corresponding jobs. Hence, we divided the problems and conquered them.
-
-- What should we do next time
-  - Several modules that implement the program processing logic should be unit tested separately first and then integrated at the end.
+We have divided the entire project into several components at the very beginning. This includes distance algorithms, scoring function, the minimax algorithm, and trees. However, instead of writing a unit test, we write the entire project all at once and then debug it. We found that this made it difficult to find and fix bugs, which slowed the overall efficiency of development. One example is that a null pointer error kept occurring because we forgot to remove empty lists when calculating Cartesian Products. 
+We can fix bugs such as these much more quickly and easily if we run unit tests.
 
 ### Some of the highlights that make us proud
 
-- Scoring function
-  - A feasible way was derived to quantify the current GameState. Details have been mentioned above.
+The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. 
+We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
+
 - Alpha-Beta Pruning with Tree structure
-  - Alpha-Beta Pruning improves performance by reducing unnecessary calculations.
+  - ~~Alpha-Beta Pruning improves performance by reducing unnecessary calculations.~~
   - Tree structure
     - The tree structure can store all the nodes in the minimax run except for the pruned ones.
     - If the performance is optimized enough, Mr. X would become invincible with the minimax algorithm of sufficient depth.
