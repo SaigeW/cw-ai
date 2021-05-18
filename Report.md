@@ -79,9 +79,4 @@ We can fix bugs such as these much more quickly and easily if we run unit tests.
 
 The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. 
 We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
-
-- Alpha-Beta Pruning with Tree structure
-  - ~~Alpha-Beta Pruning improves performance by reducing unnecessary calculations.~~
-  - Tree structure
-    - The tree structure can store all the nodes in the minimax run except for the pruned ones.
-    - If the performance is optimized enough, Mr. X would become invincible with the minimax algorithm of sufficient depth.
+The tree structure can be set to any depth. This means that if the performance is optimized enough, Mr. X will become invincible with a deep enough minimization algorithm
