@@ -45,7 +45,7 @@ Almost all of our biggest struggles in the development process come from our Imp
 
 ### Summary
 
-Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn is slightly handy so we use the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijisktra Algorithm, which will be explained in detail later.
+Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn is slightly handy so we use the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijkstra Algorithm, which will be explained in detail later.
 
 
 #### Scoring Function
@@ -58,16 +58,34 @@ S=base-\sum_{i=0}^{n} \frac{\alpha}{d_{i}^2}
 $$
 where *base* is the base score and *alpha* is an argument. The value of *alpha* is on the basis of the base score.  
 
-#### Minimax and Alpha-Beta Prunning
+#### Minimax and Alpha-Beta Pruning
 <img src="IMG_1297.PNG" style="zoom:45%;" />
 
 Simulation in the minimax algorithm uses a lite version of MyGameState class we implemented in CW-Model. A new instance will be initialized for each move and passed into the deeper recursion until the recursive function reaches the base. A tree will be created in this process, and a higher node will select the biggest or smallest score from its children nodes. Scores are passed from the bottom way to the top layer of nodes. Therefore, the helper function can select the correct optimal move by comparing the score of the root node and that of its children.
 
 ### Limitation of AI
 
-The biggest limitation of our AI is its efficiency. We have cut the unneccesary simulation and  used Alpha-Beta Prunning. Even so the workload is still huge for a low performancy laptop. 
+The biggest limitation of our AI is its efficiency. We have cut the unnecessary simulation and  used Alpha-Beta Pruning. Even so the workload is still huge for a low performance laptop. 
 
 The scoring function has another important issue. It cannot analysis the density of detectives in an area. If the four detectives are at equal distances from the suspect, but two are in the east and the rest in the other direction. The AI cannot tell that the two detectives on the east are more dangerous than the others.
 
 ### Reflection
 
+- Difficulty we have encountered
+  - Originally, we choose to debug after all the functional modules of ai are assembled.However, we found it difficult to determine which module the problem occurred in, resulting in less efficient development overall.
+
+- Solution
+  - We realized that it should be better to debug the different functional modules of the program first, and then assemble them after they can complete the corresponding jobs. Hence, we divided the problems and conquered them.
+
+- What should we do next time
+  - Several modules that implement the program processing logic should be unit tested separately first and then integrated at the end.
+
+### Some of the highlights that make us proud
+
+- Scoring function
+  - A feasible way was derived to quantify the current GameState. Details have been mentioned above.
+- Alpha-Beta Pruning with Tree structure
+  - Alpha-Beta Pruning improves performance by reducing unnecessary calculations.
+  - Tree structure
+    - The tree structure can store all the nodes in the minimax run except for the pruned ones.
+    - If the performance is optimized enough, Mr. X would become invincible with the minimax algorithm of sufficient depth.
