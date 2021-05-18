@@ -1,4 +1,4 @@
-#Report
+# Report
 
 ##CW-Model
 
@@ -60,8 +60,6 @@ $$
 where *base* is the base score and *alpha* is an argument. The value of *alpha* is on the basis of the base score.  
 
 #### Minimax and Alpha-Beta Pruning
-<img src="IMG_1297.PNG" style="zoom:45%;" />
-
 Simulation in the minimax algorithm uses a lite version of MyGameState class we implemented in CW-Model. A new instance will be initialized for each move and passed into the deeper recursion until the recursive function reaches the base. A tree will be created in this process, and a higher node will select the biggest or smallest score from its children nodes. Scores are passed from the bottom way to the top layer of nodes. Therefore, the helper function can select the correct optimal move by comparing the score of the root node and that of its children.
 
 ### Limitation of AI
@@ -77,6 +75,5 @@ We can fix bugs such as these much more quickly and easily if we run unit tests.
 
 ### Some of the highlights that make us proud
 
-The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. 
-We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
+The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
 The tree structure can be set to any depth. This means that if the performance is optimized enough, Mr. X will become invincible with a deep enough minimization algorithm.
