@@ -18,10 +18,9 @@ The implementation of function:
 ```java
 getPlayerTickets(Piece piece)
 ```
-require to return an instance of TicketBoard of type Optional by given piece.
+requires to return an instance of TicketBoard of type Optional by given piece.
 
-Generally, this function can be accomplished by implementing an anonymous class of TicketBoard.
-Such as:
+Generally, we can accomplish this function by implementing an anonymous class of TicketBoard. Such as:
 
 ```java
 new TicketBoard() {
@@ -31,12 +30,11 @@ new TicketBoard() {
     }
 }
 ```
-However, powerful JAVA alow us to arm ourselves with style of functional programming by passing a function as a parameter, which simpler and more efficient. After find the player object by given piece, we can use 
+However, powerful JAVA allows us to arm ourselves with a functional programming style by passing a function as a parameter, which is simpler and more efficient. After finding the player object by given piece, we can use
 ```java
 ticket -> player.tickets().get(ticket);
 ```
-to implementing the TicketBoard instead of anonymous class.
-Finally, return it back with wrapping of Optional.
+to implement the TicketBoard instead of an anonymous class. Finally, return it with a wrapping of Optional.
 
 ### Reflection
 
@@ -46,7 +44,7 @@ Almost all of our biggest struggles in the development process come from our Imp
 
 ### Summary
 
-Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn is slightly handy so we use the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijkstra Algorithm, which will be explained in detail later.
+Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn was slightly less handy. we used the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijkstra Algorithm, which will be explained in detail later.
 
 
 #### Scoring Function
@@ -76,4 +74,5 @@ We can fix bugs such as these much more quickly and easily if we run unit tests.
 ### Some of the highlights that make us proud
 
 The Alpha-Beta Pruning we implemented improves performance hugely by reducing unnecessary calculations. We have derived a feasible and flexible function to quantify the current GameState. It has considered not only the distances between detectives and Mr.X but also general strategies.
+
 The tree structure can be set to any depth. This means that if the performance is optimized enough, Mr. X will become invincible with a deep enough minimization algorithm.
