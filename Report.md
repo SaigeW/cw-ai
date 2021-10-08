@@ -1,6 +1,6 @@
-#Report
+# Report
 
-##CW-Model
+## CW-Model
 
 The code in CW-Model has passed all 83 tests. Most exceptional circumstances are identified with the help of the TestModule. There are 15 helper functions for methods required by the interface Board. Which will be explained later in the Implementation section.
 
