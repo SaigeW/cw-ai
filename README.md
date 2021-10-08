@@ -4,11 +4,8 @@
 
 Our AI stands on the Minimax Algorithm, which is a wildly used algorithm for turn-based games. The detective's turn was slightly less handy. we used the CartesianProduct function provided by Guava to get all possible combinations of moves for their turn. The scoring function is based on Dijkstra Algorithm, which will be explained in detail later.
 
-## Feedback from lecturer
-
-"This team had an excellent implementation with Alpha-Beta Pruning on a game tree."
-
-"Overall this work thus sits above the first class boundary."
+## Assessment and Feedback.
+In this project, we implemented the game Scotland yard and developed an AI which is based on the Alpha-beta Pruning algorithm. Overall of this work sits above the first-class boundary.
 
 ## Scoring Function
 
